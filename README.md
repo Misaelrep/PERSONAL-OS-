@@ -15,10 +15,27 @@ npm run build      # typecheck + build de producción
 | --- | --- |
 | `?t=10:14` | El reloj arranca a esa hora y sigue corriendo desde ahí. |
 | `?motion=completo` · `sutil` · `reducido` | Fuerza un nivel de movimiento (por defecto: `reducido` si el sistema pide `prefers-reduced-motion`, si no `completo`). |
+| `?entry=full` · `micro` · `none` | Fuerza la entrada diaria completa, la micro entrada o ninguna, ignorando las reglas de sesión (no guarda nada). |
 
 Momentos útiles: `06:10` (meditación activa), `07:10` (meditación pendiente → ¿mover a las 9:30?), `08:29` (transición entre bloques), `10:14` (Páginas Web, bloque profundo con objetivo), `12:05` (recuperación), `14:10` (bloque profundo sin objetivo), `17:00` (cuerpo), `19:30` (segundo pico), `21:00` (cierre, atmósfera profunda), `04:00` (noche).
 
 El estado del día se guarda en `localStorage` por fecha (`personal-os:day:YYYY-MM-DD`), así una recarga no pierde lo marcado y cada día empieza limpio. Para reiniciar un día, borra esa clave.
+
+## Entrada diaria
+
+```
+ABRIR APP → CAMPO ATMOSFÉRICO → MENSAJE DEL DÍA → DISOLUCIÓN → PUNTOS SE ORGANIZAN
+→ ¿LISTO PARA [ESTADO]? → actividad actual → ENTRAR → HOY se materializa
+```
+
+- **Primera apertura real del día** (fecha local): entrada completa. `dailyEntrySeenDate` se guarda al pulsar ENTRAR, no al empezar: si la app se cierra antes, el ritual vuelve a aparecer.
+- **Mismo día, vuelta tras ≥ 30 min**: micro entrada (≈1,7 s): atmósfera breve → *¿Listo para volver?* → HOY.
+- **Mismo día, vuelta en < 30 min**: HOY directamente.
+- Cambiar de pestaña, bloquear el teléfono o volver de otra app no dispara nada: se decide una vez por carga de página. Si cambia el día con la app abierta, la entrada del nuevo día llega en la siguiente apertura real.
+- Con una sesión de Focus en curso no se muestra ninguna entrada.
+- **Mensaje del día**: biblioteca editorial local en `src/data/dailyMessages.ts`, sin IA ni red. Se elige con `díaDelAño % mensajes` y se guarda `dailyMessageId` con la fecha, así todo el día muestra el mismo.
+- **Orientación**: *¿Listo para [estado]?* según el estado energético (`ENERGY_QUESTION` en `src/domain/energy.ts`) y debajo la actividad actual. Es independiente del mensaje.
+- Memoria en `localStorage` → `personal-os:entry` (`dailyEntrySeenDate`, `dailyMessage`, `lastActiveAt`).
 
 ## Arquitectura
 

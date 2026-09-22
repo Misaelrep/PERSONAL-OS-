@@ -36,6 +36,23 @@ export const fade: Variants = {
   exit: { opacity: 0, y: -4, transition: transition.micro },
 }
 
+/**
+ * MATERIALIZE — HOY appearing after the entry ritual: surfaces come into focus.
+ * The filter is cleared at the end so glass surfaces keep sampling the light behind them.
+ */
+export const materialize: Variants = {
+  hidden: { opacity: 0, y: 6, scale: 0.985, filter: 'blur(12px)' },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    filter: 'blur(0px)',
+    transition: { duration: 1, ease: EASE },
+    transitionEnd: { filter: 'none' },
+  },
+  exit: { opacity: 0, transition: transition.micro },
+}
+
 /** Staggered FADE for a group of surfaces. */
 export const fadeGroup = (stagger = 0.08, delay = 0): Variants => ({
   hidden: {},

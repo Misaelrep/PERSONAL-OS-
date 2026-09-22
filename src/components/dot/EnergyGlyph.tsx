@@ -15,9 +15,9 @@ import { EASE } from '../../motion/tokens'
  *
  * The same five points MORPH between states.
  */
-type Dot = { x: number; y: number; r: number; o: number }
+export type Dot = { x: number; y: number; r: number; o: number }
 
-const CONFIG: Record<EnergyState, Dot[]> = {
+export const ENERGY_CONFIG: Record<EnergyState, Dot[]> = {
   activacion: [
     { x: 8, y: 8, r: 1.7, o: 1 },
     { x: 2.5, y: 2.5, r: 1.1, o: 0.55 },
@@ -72,7 +72,7 @@ const CONFIG: Record<EnergyState, Dot[]> = {
 export function EnergyGlyph({ energy, className = '' }: { energy: EnergyState; className?: string }) {
   return (
     <svg aria-hidden viewBox="0 0 16 16" className={`size-4 shrink-0 overflow-visible ${className}`}>
-      {CONFIG[energy].map((d, i) => (
+      {ENERGY_CONFIG[energy].map((d, i) => (
         <m.circle
           key={i}
           fill="currentColor"
