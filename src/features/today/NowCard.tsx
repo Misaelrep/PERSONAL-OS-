@@ -1,5 +1,6 @@
 import { AnimatePresence, m } from 'framer-motion'
 import { useState } from 'react'
+import { ActiveMatrix } from '../../components/dot/ActiveMatrix'
 import { Button } from '../../components/ui/Button'
 import { Label } from '../../components/ui/Label'
 import { StatusGlyph } from '../../components/ui/StatusGlyph'
@@ -30,7 +31,11 @@ export function NowCard({ onStartFocus, focusing = false }: NowCardProps) {
       <div className="now-glow" aria-hidden />
       <div className="relative flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 text-ink-3">
-          <StatusGlyph status={block.status} />
+          {block.status === 'activo' || block.status === 'en-focus' ? (
+            <ActiveMatrix gathering={focusing} />
+          ) : (
+            <StatusGlyph status={block.status} />
+          )}
           <Label className="text-ink-2">Ahora</Label>
         </div>
         <span className="tabular text-[14px] text-ink-2 sm:text-[15px]">
@@ -50,7 +55,7 @@ export function NowCard({ onStartFocus, focusing = false }: NowCardProps) {
           <h2
             id="now-title"
             aria-live="polite"
-            className={`mt-8 font-display text-[clamp(36px,5.4vw,62px)] leading-[1.02] font-normal tracking-[-0.048em] text-ink transition-opacity duration-500 sm:mt-10 ${
+            className={`mt-8 font-display text-[clamp(40px,5.6vw,64px)] leading-[1] font-[460] tracking-[-0.045em] text-ink transition-opacity duration-500 sm:mt-10 ${
               block.record.status ? 'opacity-55' : ''
             }`}
           >

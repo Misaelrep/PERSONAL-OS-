@@ -84,25 +84,42 @@ export function DayPath({ defaultOpen }: { defaultOpen: boolean }) {
   )
 }
 
+/**
+ * Progress in the dot system's own terms: done points are lit, pending points
+ * are the matrix's faint "off" dots, the active one glows.
+ */
 function ProgressDots({ blocks }: { blocks: ScheduledBlock[] }) {
   const counted = blocks.filter((b) => b.kind !== 'sleep')
+  const pitch = 12
   return (
-    <div className="mt-3 flex items-center gap-[7px]" aria-hidden>
-      {counted.map((b) => {
+    <svg
+      aria-hidden
+      className="mt-3 h-3 overflow-visible"
+      width={counted.length * pitch}
+      viewBox={`0 0 ${counted.length * pitch} 12`}
+    >
+      {counted.map((b, i) => {
+        const cx = i * pitch + pitch / 2
         const s = b.status
-        const cls =
+        if (s === 'activo' || s === 'en-focus') {
+          return (
+            <g key={b.id}>
+              <circle cx={cx} cy={6} r={5.2} fill="var(--accent)" opacity={0.14} />
+              <circle cx={cx} cy={6} r={2.7} fill="var(--accent)" />
+            </g>
+          )
+        }
+        const [r, fill, opacity] =
           s === 'completado'
-            ? 'bg-ink-3'
+            ? [2.3, 'var(--ink-3)', 0.9]
             : s === 'parcial'
-              ? 'bg-[linear-gradient(90deg,var(--ink-3)_50%,transparent_50%)] ring-1 ring-inset ring-[var(--ink-3)]'
-              : s === 'activo' || s === 'en-focus'
-                ? 'bg-accent shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_18%,transparent)]'
-                : s === 'omitido'
-                  ? 'ring-1 ring-inset ring-[var(--ink-4)] opacity-60'
-                  : 'ring-1 ring-inset ring-[var(--ink-4)]'
-        return <span key={b.id} className={`size-[6px] rounded-full ${cls}`} />
+              ? [2.3, 'var(--ink-3)', 0.45]
+              : s === 'omitido'
+                ? [1.1, 'var(--ink-4)', 0.6]
+                : [1.5, 'var(--ink-4)', 0.75]
+        return <circle key={b.id} cx={cx} cy={6} r={r} fill={fill} opacity={opacity} />
       })}
-    </div>
+    </svg>
   )
 }
 

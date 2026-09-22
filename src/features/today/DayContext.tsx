@@ -1,4 +1,5 @@
 import { AnimatePresence, m } from 'framer-motion'
+import { EnergyGlyph } from '../../components/dot/EnergyGlyph'
 import { Label } from '../../components/ui/Label'
 import { profile } from '../../data/profile'
 import { ENERGY_LABEL } from '../../domain/energy'
@@ -25,11 +26,20 @@ export function DayContext() {
         </div>
       </div>
 
-      <h1 className="display-reflection mt-6 font-display text-[clamp(32px,4vw,52px)] leading-[1.06] font-light tracking-[-0.045em] sm:mt-10">
-        <span className="block">{greeting(now)},</span>
-        <span className="block">{profile.name}.</span>
+      {/* Editorial greeting: a quiet first line, the name as the signature, ending on a point. */}
+      <h1 aria-label={`${greeting(now)}, ${profile.name}.`} className="mt-7 font-display sm:mt-10">
+        <span aria-hidden className="block text-[21px] leading-none font-light tracking-[-0.02em] text-ink-3 sm:text-[26px]">
+          {greeting(now)},
+        </span>
+        <span
+          aria-hidden
+          className="display-reflection mt-2 block text-[clamp(36px,4.2vw,52px)] leading-[0.98] font-[440] tracking-[-0.05em] sm:mt-2.5"
+        >
+          {profile.name}
+          <span className="greeting-dot" />
+        </span>
       </h1>
-      <p className="mt-3 text-[16px] tracking-[-0.005em] text-ink-2 sm:mt-4 sm:text-[17px]">
+      <p className="mt-4 text-[15px] tracking-[-0.005em] text-ink-2 sm:mt-5 sm:text-[17px]">
         {view.routine.theme}
         {isFallback && <span className="text-ink-4"> · rutina del {view.routine.dayName.toLowerCase()}</span>}
       </p>
@@ -41,11 +51,11 @@ function EnergyChip() {
   const { view } = useDay()
   return (
     <div
-      className="surface-quiet flex h-8 items-center gap-2.5 rounded-full pr-3.5 pl-3"
+      className="surface-quiet flex h-8 items-center gap-2 rounded-full pr-3.5 pl-2.5"
       title="Estado energético"
       aria-label={`Estado energético: ${ENERGY_LABEL[view.energy]}`}
     >
-      <span className="size-1.5 rounded-full bg-accent" />
+      <EnergyGlyph energy={view.energy} className="text-accent" />
       <AnimatePresence mode="wait" initial={false}>
         <m.span
           key={view.energy}

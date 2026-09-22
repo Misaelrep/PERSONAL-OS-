@@ -5,11 +5,11 @@ import { useMotion } from '../motion/MotionLevel'
 import { EASE } from '../motion/tokens'
 
 /**
- * DISPERSIÓN → CONCENTRACIÓN → LIBERACIÓN.
+ * DISPERSIÓN → AGRUPACIÓN → CONCENTRACIÓN → LIBERACIÓN.
  * A handful of slow points: peripheral in HOY, drawn toward the center in
  * Focus, released outward when Focus ends.
  */
-export type ParticleMode = 'dispersed' | 'converged' | 'released'
+export type ParticleMode = 'dispersed' | 'gathering' | 'converged' | 'released'
 
 interface Particle {
   /** Peripheral resting place (vw / vh). */
@@ -71,8 +71,16 @@ export function Particles({ mode }: { mode: ParticleMode }) {
   return (
     <div className="particles">
       {list.map((p, i) => {
-        const [x, y] = mode === 'converged' ? p.focus : mode === 'released' ? p.out : p.home
-        const duration = mode === 'converged' ? 2.4 + (i % 5) * 0.25 : mode === 'released' ? 2.2 : 6
+        const [x, y] =
+          mode === 'converged'
+            ? p.focus
+            : mode === 'released'
+              ? p.out
+              : mode === 'gathering'
+                ? [(p.home[0] + p.focus[0]) / 2, (p.home[1] + p.focus[1]) / 2]
+                : p.home
+        const duration =
+          mode === 'converged' ? 2.4 + (i % 5) * 0.25 : mode === 'released' ? 2.2 : mode === 'gathering' ? 1.2 : 6
         return (
           <m.span
             key={i}

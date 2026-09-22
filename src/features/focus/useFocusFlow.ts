@@ -118,7 +118,13 @@ export function useFocusFlow(): FocusFlow {
   const atmosphere: FocusFlow['atmosphere'] = {
     preset: deep ? 'focus-session' : phase === 'today' || phase === 'entering' ? view.energy : 'exhale',
     expanded: (phase === 'entering' && step >= 2) || phase === 'focus',
-    particles: deep ? 'converged' : phase === 'exiting' || phase === 'result' ? 'released' : 'dispersed',
+    particles: deep
+      ? 'converged'
+      : phase === 'entering'
+        ? 'gathering'
+        : phase === 'exiting' || phase === 'result'
+          ? 'released'
+          : 'dispersed',
     // Without the cinematic sequence, content appears at once: let the light settle quickly.
     duration: !cinematic ? 0.6 : phase === 'entering' ? 1.1 : phase === 'exiting' ? 1.6 : 1.8,
     wave,
