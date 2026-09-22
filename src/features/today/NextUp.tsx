@@ -15,7 +15,9 @@ export function NextUp() {
         <Label>{nextIsTomorrow ? 'Mañana' : 'Siguiente'}</Label>
         <span className="tabular text-[13px] text-ink-3">{formatRange(next.startMin, next.endMin)}</span>
       </div>
-      <p className="mt-4 text-[24px] leading-tight tracking-[-0.022em] text-ink sm:text-[26px]">{next.title}</p>
+      <p className="mt-4 font-display text-[23px] leading-tight font-normal tracking-[-0.035em] text-ink sm:text-[25px]">
+        {next.title}
+      </p>
       <p className="mt-1.5 text-[15px] text-ink-3">
         {blockDescription(next)}
         {next.kind !== 'sleep' && <> · {formatDuration(next.endMin - next.startMin)}</>}

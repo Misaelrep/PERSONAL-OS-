@@ -14,6 +14,8 @@ interface AtmosphereProps {
   duration?: number
   /** Increment to emit one soft ring from the center (end of Focus). */
   wave?: number
+  /** 'today' adds HOY's pearl light; Focus and its closing keep their own atmosphere. */
+  scene?: 'today' | 'flow'
 }
 
 /**
@@ -21,7 +23,14 @@ interface AtmosphereProps {
  * Colors are registered custom properties, so they interpolate smoothly
  * when the energy state (or Focus) changes.
  */
-export function Atmosphere({ preset, expanded = false, particles, duration = 1.8, wave = 0 }: AtmosphereProps) {
+export function Atmosphere({
+  preset,
+  expanded = false,
+  particles,
+  duration = 1.8,
+  wave = 0,
+  scene = 'today',
+}: AtmosphereProps) {
   const p = PRESETS[preset]
   const { ambient } = useMotion()
 
@@ -31,13 +40,14 @@ export function Atmosphere({ preset, expanded = false, particles, duration = 1.8
     root.style.setProperty('--atmo-base', p.base)
     p.halos.forEach((c, i) => root.style.setProperty(`--halo-${i + 1}`, c))
     root.style.setProperty('--particle', p.particle)
+    root.style.setProperty('--particle-glow', p.glow ?? p.particle)
     root.style.setProperty('--accent', p.accent)
     root.dataset.tone = p.tone
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', p.base)
   }, [p, duration])
 
   return (
-    <div aria-hidden className="atmo" data-ambient={ambient ? 'on' : 'off'}>
+    <div aria-hidden className="atmo" data-ambient={ambient ? 'on' : 'off'} data-scene={scene}>
       <m.div
         className="atmo-halos"
         initial={false}
@@ -49,6 +59,8 @@ export function Atmosphere({ preset, expanded = false, particles, duration = 1.8
         <div className="halo halo-3" />
         <div className="halo halo-beam" />
       </m.div>
+      <div className="atmo-pearl" />
+      <div className="atmo-sheen" />
       <Particles mode={particles} />
       {wave > 0 && (
         <m.div

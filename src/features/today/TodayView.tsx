@@ -47,7 +47,7 @@ export function TodayView({ onStartFocus, step }: TodayViewProps) {
         </m.div>
       </m.div>
 
-      <div className="mt-9 grid gap-5 sm:mt-12 lg:mt-16 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-x-16 xl:gap-x-24">
+      <div className="mt-8 grid gap-5 sm:mt-11 lg:mt-14 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-x-16 xl:gap-x-24">
         <div className="flex min-w-0 flex-col gap-4 sm:gap-5">
           <m.div variants={fade}>
             <m.div

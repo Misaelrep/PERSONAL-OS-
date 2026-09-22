@@ -50,7 +50,7 @@ export function NowCard({ onStartFocus, focusing = false }: NowCardProps) {
           <h2
             id="now-title"
             aria-live="polite"
-            className={`mt-8 text-[clamp(38px,6.2vw,68px)] leading-[0.98] font-[450] tracking-[-0.038em] text-ink transition-opacity duration-500 sm:mt-10 ${
+            className={`mt-8 font-display text-[clamp(36px,5.4vw,62px)] leading-[1.02] font-normal tracking-[-0.048em] text-ink transition-opacity duration-500 sm:mt-10 ${
               block.record.status ? 'opacity-55' : ''
             }`}
           >

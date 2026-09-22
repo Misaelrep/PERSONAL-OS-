@@ -20,7 +20,7 @@ export function App() {
 
   return (
     <>
-      <Atmosphere {...flow.atmosphere} />
+      <Atmosphere {...flow.atmosphere} scene={phase === 'today' || (phase === 'entering' && step < 3) ? 'today' : 'flow'} />
       <NavRail hidden={!(phase === 'today' || (phase === 'entering' && step < 2))} />
 
       {showToday && <TodayView step={phase === 'entering' ? step : 0} onStartFocus={flow.start} />}

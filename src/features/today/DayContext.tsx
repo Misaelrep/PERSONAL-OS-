@@ -25,10 +25,11 @@ export function DayContext() {
         </div>
       </div>
 
-      <h1 className="mt-7 text-[clamp(30px,4.4vw,50px)] leading-[1.04] font-normal tracking-[-0.032em] text-ink sm:mt-10">
-        {greeting(now)}, {profile.name}.
+      <h1 className="display-reflection mt-6 font-display text-[clamp(32px,4vw,52px)] leading-[1.06] font-light tracking-[-0.045em] sm:mt-10">
+        <span className="block">{greeting(now)},</span>
+        <span className="block">{profile.name}.</span>
       </h1>
-      <p className="mt-2.5 text-[16px] tracking-[-0.01em] text-ink-2 sm:mt-3 sm:text-[18px]">
+      <p className="mt-3 text-[16px] tracking-[-0.005em] text-ink-2 sm:mt-4 sm:text-[17px]">
         {view.routine.theme}
         {isFallback && <span className="text-ink-4"> · rutina del {view.routine.dayName.toLowerCase()}</span>}
       </p>

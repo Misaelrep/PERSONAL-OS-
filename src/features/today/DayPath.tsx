@@ -122,7 +122,9 @@ function PathItem({ block }: { block: ScheduledBlock }) {
         aria-controls={detailId}
         aria-current={current ? 'step' : undefined}
         className={`grid w-full grid-cols-[16px_46px_1fr] items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors duration-200 hover:bg-[var(--line)] ${
-          current ? 'bg-[color-mix(in_srgb,var(--accent)_8%,transparent)]' : ''
+          current
+            ? 'bg-[var(--glass-quiet)] shadow-[var(--glass-shadow-quiet)] hover:bg-[var(--glass-quiet)]'
+            : ''
         }`}
       >
         <StatusGlyph status={block.status} className={GLYPH[block.status]} />

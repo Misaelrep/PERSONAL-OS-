@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/inter-tight';
+@import '@fontsource-variable/sora';
 
 /* ---------------------------------------------------------------------- */
 /* Tokens                                                                   */
@@ -7,6 +8,8 @@
 
 @theme {
   --font-sans: 'Inter Tight Variable', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  /* Display voice for the few large words of HOY. Information stays in Inter Tight. */
+  --font-display: 'Sora Variable', 'Inter Tight Variable', ui-sans-serif, system-ui, sans-serif;
 
   --color-deep: #081a32;
   --color-midnight: #102746;
@@ -18,6 +21,13 @@
   --color-peach: #ffd8b7;
   --color-violet: #a78bfa;
   --color-slate: #70809a;
+
+  /* Pearl / silver light (HOY). */
+  --color-pearl: #fcfdfe;
+  --color-ice: #f7fafd;
+  --color-silver-mist: #eef2f6;
+  --color-liquid-silver: #dce3ea;
+  --color-cool-reflection: #d8e7fa;
 
   --ease-astral: cubic-bezier(0.22, 1, 0.36, 1);
   --breakpoint-xs: 420px;
@@ -40,6 +50,7 @@
 @property --halo-3 { syntax: '<color>'; inherits: true; initial-value: transparent; }
 @property --halo-4 { syntax: '<color>'; inherits: true; initial-value: transparent; }
 @property --particle { syntax: '<color>'; inherits: true; initial-value: transparent; }
+@property --particle-glow { syntax: '<color>'; inherits: true; initial-value: transparent; }
 @property --accent { syntax: '<color>'; inherits: true; initial-value: #3a82f6; }
 
 :root {
@@ -56,6 +67,33 @@
   --control: #081a32;
   --control-ink: #ffffff;
 
+  /* Glass / pearl surfaces: light passing through, a nacreous rim, a soft specular. */
+  --glass: linear-gradient(168deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.78) 48%, rgba(250, 252, 254, 0.82) 100%);
+  --glass-quiet: linear-gradient(168deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.62) 100%);
+  --glass-border: rgba(255, 255, 255, 0.68);
+  --glass-rim: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(216, 231, 250, 0.9) 30%,
+    rgba(220, 227, 234, 0.55) 55%,
+    rgba(226, 220, 255, 0.6) 78%,
+    rgba(255, 255, 255, 0.95) 100%
+  );
+  --glass-sheen:
+    linear-gradient(122deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.2) 24%, rgba(255, 255, 255, 0) 44%),
+    radial-gradient(120% 70% at 50% -30%, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 62%);
+  --glass-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.88),
+    0 0 0 1px rgba(40, 70, 120, 0.045),
+    0 2px 6px -2px rgba(30, 50, 90, 0.05),
+    0 30px 70px -34px rgba(36, 58, 104, 0.24);
+  --glass-shadow-quiet:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 0 0 1px rgba(40, 70, 120, 0.04),
+    0 18px 44px -30px rgba(36, 58, 104, 0.18);
+  --now-glow: rgba(216, 231, 250, 0.7);
+  --display-reflection: #8fa3bf;
+
   transition:
     --atmo-base var(--atmo-dur) var(--ease-astral),
     --halo-1 var(--atmo-dur) var(--ease-astral),
@@ -63,6 +101,7 @@
     --halo-3 var(--atmo-dur) var(--ease-astral),
     --halo-4 var(--atmo-dur) var(--ease-astral),
     --particle var(--atmo-dur) var(--ease-astral),
+    --particle-glow var(--atmo-dur) var(--ease-astral),
     --accent var(--atmo-dur) var(--ease-astral);
 
   color-scheme: light;
@@ -81,6 +120,15 @@
   --surface-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 0 24px 60px -24px rgba(0, 0, 0, 0.45);
   --control: #eaf2ff;
   --control-ink: #081a32;
+  --glass: var(--surface);
+  --glass-quiet: var(--surface-quiet);
+  --glass-border: rgba(234, 242, 255, 0.08);
+  --glass-rim: linear-gradient(135deg, rgba(234, 242, 255, 0.16), rgba(234, 242, 255, 0.04) 50%, rgba(234, 242, 255, 0.1));
+  --glass-sheen: linear-gradient(122deg, rgba(234, 242, 255, 0.06) 0%, rgba(234, 242, 255, 0) 40%);
+  --glass-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 0 24px 60px -24px rgba(0, 0, 0, 0.45);
+  --glass-shadow-quiet: 0 18px 44px -30px rgba(0, 0, 0, 0.4);
+  --now-glow: color-mix(in srgb, var(--accent) 16%, transparent);
+  --display-reflection: #9fb3cf;
   color-scheme: dark;
 }
 
@@ -141,19 +189,83 @@
 /* Surfaces                                                                 */
 /* ---------------------------------------------------------------------- */
 
+/* Glass / pearl: a nacreous rim (::before) and a soft specular reflection (::after). */
 @utility surface {
-  background: var(--surface);
-  border: 1px solid var(--surface-border);
-  box-shadow: var(--surface-shadow);
-  -webkit-backdrop-filter: blur(20px) saturate(1.2);
-  backdrop-filter: blur(20px) saturate(1.2);
+  position: relative;
+  isolation: isolate;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(22px) saturate(1.25);
+  backdrop-filter: blur(22px) saturate(1.25);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    padding: 1px;
+    border-radius: inherit;
+    background: var(--glass-rim);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--glass-sheen);
+    pointer-events: none;
+  }
 }
 
 @utility surface-quiet {
-  background: var(--surface-quiet);
-  border: 1px solid var(--surface-border);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
+  position: relative;
+  isolation: isolate;
+  background: var(--glass-quiet);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow-quiet);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  backdrop-filter: blur(16px) saturate(1.2);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    padding: 1px;
+    border-radius: inherit;
+    background: var(--glass-rim);
+    opacity: 0.8;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--glass-sheen);
+    opacity: 0.7;
+    pointer-events: none;
+  }
+}
+
+/* A faint vertical reflection across large display type, like light on glass. */
+@utility display-reflection {
+  background: linear-gradient(180deg, var(--ink) 0%, var(--ink) 38%, color-mix(in srgb, var(--ink) 70%, var(--display-reflection)) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -272,6 +384,82 @@
   animation: none;
 }
 
+/* ---------------------------------------------------------------------- */
+/* Pearl light — HOY only (light tone). Silver appears as reflection, not as */
+/* a surface: white light zones, cool reflections, a faint violet, a mist.  */
+/* ---------------------------------------------------------------------- */
+
+.atmo-pearl,
+.atmo-sheen {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.2s var(--ease-astral);
+}
+
+.atmo[data-scene='today'] .atmo-pearl,
+.atmo[data-scene='today'] .atmo-sheen {
+  opacity: 1;
+}
+
+:root[data-tone='deep'] .atmo-pearl,
+:root[data-tone='deep'] .atmo-sheen {
+  opacity: 0;
+}
+
+.atmo-pearl {
+  inset: 0;
+  background:
+    /* white light source, upper right: a white core falling off into ice blue */
+    radial-gradient(
+      64vmax 46vmax at 86% 0%,
+      rgba(255, 255, 255, 0.98) 0%,
+      rgba(255, 255, 255, 0.7) 20%,
+      rgba(216, 231, 250, 0.62) 44%,
+      rgba(216, 231, 250, 0) 76%
+    ),
+    /* cool reflection, left */
+    radial-gradient(48vmax 36vmax at 4% 40%, rgba(206, 224, 250, 0.7), rgba(216, 231, 250, 0) 72%),
+    /* very soft violet, low */
+    radial-gradient(52vmax 34vmax at 58% 100%, rgba(224, 216, 255, 0.6), rgba(228, 222, 255, 0) 72%),
+    /* a small white glare, lower left */
+    radial-gradient(22vmax 14vmax at 18% 88%, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0) 70%),
+    /* silver mist, very low and wide */
+    radial-gradient(90vmax 24vmax at 34% 106%, rgba(220, 227, 234, 0.45), rgba(220, 227, 234, 0) 70%);
+}
+
+/* Specular reflection: two parallel streaks of white light, like light on glass.
+   It shifts very slowly — a change of reflection, not an animation. */
+.atmo-sheen {
+  inset: -40%;
+  background:
+    linear-gradient(
+      112deg,
+      rgba(255, 255, 255, 0) 39%,
+      rgba(255, 255, 255, 0.55) 45.5%,
+      rgba(255, 255, 255, 0.95) 48.5%,
+      rgba(255, 255, 255, 0.55) 51.5%,
+      rgba(255, 255, 255, 0) 58%
+    ),
+    linear-gradient(
+      112deg,
+      rgba(255, 255, 255, 0) 58.5%,
+      rgba(255, 255, 255, 0.6) 60%,
+      rgba(255, 255, 255, 0) 62%
+    );
+  will-change: transform;
+  animation: sheen-drift 46s ease-in-out infinite alternate;
+}
+
+@keyframes sheen-drift {
+  0% { transform: translate3d(-4%, -1%, 0); }
+  100% { transform: translate3d(5%, 1.5%, 0); }
+}
+
+.atmo[data-ambient='off'] .atmo-sheen {
+  animation: none;
+}
+
 .atmo-wave {
   position: absolute;
   top: 50%;
@@ -317,7 +505,7 @@
   display: block;
   border-radius: 50%;
   background: var(--particle);
-  box-shadow: 0 0 10px 1px var(--particle);
+  box-shadow: 0 0 8px 2px var(--particle-glow);
   animation-name: particle-drift;
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
@@ -372,8 +560,8 @@
   border-radius: 50%;
   background: radial-gradient(
     closest-side,
-    color-mix(in srgb, var(--accent) 16%, transparent),
-    color-mix(in srgb, var(--accent) 5%, transparent) 55%,
+    var(--now-glow),
+    color-mix(in srgb, var(--now-glow) 35%, transparent) 55%,
     transparent
   );
   pointer-events: none;
@@ -390,6 +578,7 @@
 /* ---------------------------------------------------------------------- */
 
 :root[data-motion='reducido'] .halo,
+:root[data-motion='reducido'] .atmo-sheen,
 :root[data-motion='reducido'] .now-glow,
 :root[data-motion='reducido'] .particle-dot,
 :root[data-motion='sutil'] .now-glow {
@@ -405,6 +594,7 @@
 /* Safety net before JS sets data-motion (and for any element outside React). */
 @media (prefers-reduced-motion: reduce) {
   :root:not([data-motion='completo']):not([data-motion='sutil']) .halo,
+  :root:not([data-motion='completo']):not([data-motion='sutil']) .atmo-sheen,
   :root:not([data-motion='completo']):not([data-motion='sutil']) .now-glow,
   :root:not([data-motion='completo']):not([data-motion='sutil']) .particle-dot {
     animation: none !important;
