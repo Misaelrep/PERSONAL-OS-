@@ -12,7 +12,8 @@ export const routines: Partial<Record<Weekday, DayRoutine>> = {
 /** Used while a weekday has no routine of its own yet. */
 export const FALLBACK_ROUTINE = tuesday
 
+/** A registered day without blocks counts as a day without a routine yet. */
 export function routineFor(date: Date): { routine: DayRoutine; isFallback: boolean } {
   const own = routines[date.getDay() as Weekday]
-  return own ? { routine: own, isFallback: false } : { routine: FALLBACK_ROUTINE, isFallback: true }
+  return own && own.blocks.length > 0 ? { routine: own, isFallback: false } : { routine: FALLBACK_ROUTINE, isFallback: true }
 }

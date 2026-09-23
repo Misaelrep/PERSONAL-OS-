@@ -4,7 +4,8 @@ import { buildDayView } from '../../domain/schedule'
 import { formatClock, toMinutes } from '../../domain/time'
 import type { DayRoutine, DayState } from '../../domain/types'
 import { dayReducer, emptyDay } from '../../state/dayReducer'
-import { CONTINUE_AT, EXIT, EXIT_STAGES, NAME, NAME_S, cleanAt, exploreMorphs, nameAt, nameOpacity, releaseAtMs } from './choreography'
+import { routineFor, routines } from '../../data/routines'
+import { CONTINUE_AT, EXIT, EXIT_STAGES, NAME, NAME_S, cleanAt, continueAt, exploreMorphs, nameAt, nameOpacity, releaseAtMs } from './choreography'
 import { hitTest, layoutDayscape, placeNames, selectionPoses, targetOf, type Measure } from './layout'
 import { buildDayscape, getVisualRole, stateLabel } from './model'
 
@@ -267,5 +268,89 @@ describe('DAYSCAPE — composition', () => {
     )
     const now = poses.get('paginas-web')!
     expect(now.opacity).toBeGreaterThan(0.5)
+  })
+})
+
+describe('DAYSCAPE — any day', () => {
+  const block = (id: string, start: string, end: string | undefined, kind: DayRoutine['blocks'][number]['kind'] = 'practice') => ({
+    id,
+    start,
+    end,
+    title: `Actividad ${id}`,
+    kind,
+    energy: 'focus' as const,
+  })
+  const day = (blocks: DayRoutine['blocks'], time: string) => {
+    const routine: DayRoutine = { weekday: 3, dayName: 'Miércoles', theme: '', blocks }
+    const now = toMinutes(time)
+    return buildDayscape(buildDayView(routine, emptyDay('2026-09-23'), now), now)
+  }
+  const sane = (m: ReturnType<typeof day>, w: number, h: number) => {
+    const l = layoutDayscape(m, w, h)
+    placeNames(l, measure, formatClock)
+    for (const p of l.items) {
+      for (const v of [p.x, p.y, p.R, p.opacity, p.blur]) expect(Number.isFinite(v)).toBe(true)
+      expect(p.x).toBeGreaterThan(0)
+      expect(p.x).toBeLessThan(w)
+      expect(p.y).toBeGreaterThan(0)
+      expect(p.y).toBeLessThan(h)
+      if (p.name) {
+        expect(p.x + p.name.dx).toBeGreaterThanOrEqual(0)
+        expect(p.x + p.name.dx + p.name.w).toBeLessThanOrEqual(w)
+      }
+    }
+    expect(Number.isFinite(cleanAt(m.activities))).toBe(true)
+    expect(continueAt(m.activities)).toBeGreaterThan(cleanAt(m.activities))
+    return l
+  }
+
+  it('a registered day without blocks falls back to a routine instead of breaking', () => {
+    const wednesday = new Date(2026, 8, 23, 10, 14)
+    routines[3] = { ...tuesday, weekday: 3, blocks: [] }
+    try {
+      const { routine, isFallback } = routineFor(wednesday)
+      expect(isFallback).toBe(true)
+      expect(routine.blocks.length).toBeGreaterThan(0)
+    } finally {
+      delete routines[3]
+    }
+  })
+
+  it('a single activity: AHORA alone, formed quickly, CONTINUAR soon after', () => {
+    const m = day([block('a', '10:00', '12:00', 'deep')], '10:14')
+    expect(m.activities).toHaveLength(1)
+    expect(m.current.id).toBe('a')
+    expect(m.current.revealAt).toBeLessThan(3)
+    expect(continueAt(m.activities)).toBeLessThan(6)
+    sane(m, 390, 844)
+  })
+
+  it('nothing happening now (before the day): the night is the present', () => {
+    const m = day([block('a', '09:00', '10:00'), block('b', '11:00', '12:00'), block('z', '22:00', undefined, 'sleep')], '06:30')
+    expect(m.current.side).toBe('current')
+    expect(m.activities.filter((a) => a.side === 'past')).toHaveLength(0)
+    sane(m, 390, 844)
+  })
+
+  it('only sleep in the routine', () => {
+    sane(day([block('z', '22:00', undefined, 'sleep')], '10:14'), 390, 844)
+  })
+
+  it('a crowded day (30 activities) keeps every form and name on screen, phone to desktop', () => {
+    const blocks = Array.from({ length: 30 }, (_, i) => {
+      const s = 6 * 60 + i * 30
+      const hhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+      return block(`b${i}`, hhmm(s), hhmm(s + 25), i % 4 === 0 ? 'deep' : 'practice')
+    })
+    const m = day(blocks, '12:40')
+    expect(m.activities.length).toBeGreaterThanOrEqual(30)
+    expect(cleanAt(m.activities)).toBeGreaterThan(cleanAt(scape('10:14').activities))
+    for (const [w, h] of [[320, 568], [390, 844], [768, 1024], [1440, 900]]) sane(m, w, h)
+  })
+
+  it('a transition happening now is AHORA too', () => {
+    const m = scape('09:20')
+    expect(m.current.id).toBe('pausa')
+    sane(m, 390, 844)
   })
 })

@@ -127,9 +127,11 @@ export function layoutDayscape(model: DayscapeModel, width: number, height: numb
     groups.set(key, [...(groups.get(key) ?? []), a])
   }
 
+  // A crowded day draws its secondary forms a little smaller, so it still breathes.
+  const density = clamp(Math.sqrt(18 / Math.max(1, model.activities.length - 1)), 0.7, 1)
   const items: (Placed & { fixed?: boolean })[] = model.activities.map((a) => {
     const look = depthLook(a)
-    const R = radiusOf(a, look.scale, ks)
+    const R = radiusOf(a, look.scale, ks) * (a.side === 'current' ? 1 : density)
     const base = { a, ...look, R, hit: hitRadius(a, R) }
     if (a.side === 'current') return { ...base, ...anchor, fixed: true }
     const group = groups.get(a.plane + a.side)!
@@ -261,8 +263,11 @@ export function placeNames(layout: DayscapeLayout, measure: Measure, clock: (m: 
         best = c
       }
     })
-    it.name = { dx: best.x - it.x, dy: best.y - it.y, w, h, align: best.align }
-    taken.push({ x: best.x, y: best.y, w, h })
+    // A crowded day may leave no free place: the name still stays on screen.
+    const x = clamp(best.x, 10, width - 10 - w)
+    const y = clamp(best.y, 64, height - 44 - h)
+    it.name = { dx: x - it.x, dy: y - it.y, w, h, align: best.align }
+    taken.push({ x, y, w, h })
   }
 }
 

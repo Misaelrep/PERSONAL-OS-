@@ -2,7 +2,8 @@ import { AnimatePresence, animate, m, motionValue, useTransform, type AnimationP
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
 import { ActiveMatrix } from '../../components/dot/ActiveMatrix'
 import { Label } from '../../components/ui/Label'
-import { formatClock, formatDuration } from '../../domain/time'
+import { formatClock, formatDuration, minutesOfDay } from '../../domain/time'
+import { useDay } from '../../state/DayProvider'
 import { useViewport } from '../../hooks/useViewport'
 import { EASE } from '../../motion/tokens'
 import { Aperture, MODULE_SCALE, makeMotion, visibleRange, type ApertureMotion } from './Aperture'
@@ -143,6 +144,9 @@ export const Dayscape = memo(function Dayscape({
 
   const stageRef = useRef(stage)
   stageRef.current = stage
+  // Every pending timer is cleared when the field goes away.
+  const timers = useRef<number[]>([])
+  useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), [])
   const interactive = !reached(stage, 'settle')
   const exiting = reached(stage, 'settle')
 
@@ -192,10 +196,10 @@ export const Dayscape = memo(function Dayscape({
   const release = useCallback(
     (id: string) => {
       // After a moment, the form returns slowly to its own cycle.
-      window.setTimeout(() => {
+      timers.current.push(window.setTimeout(() => {
         const rec = recs.get(id)
         if (rec && selectedRef.current !== id && !reached(stageRef.current, 'settle')) resumeMorph(rec, speed)
-      }, 800 * speed)
+      }, 800 * speed))
     },
     [recs, speed],
   )
@@ -380,8 +384,6 @@ export const Dayscape = memo(function Dayscape({
   const exitStart = useRef(0)
   const exitClock = useCallback(() => (performance.now() - exitStart.current) / speed, [speed])
   const [matterOn, setMatterOn] = useState(false)
-  const timers = useRef<number[]>([])
-  useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), [])
 
   useEffect(() => {
     if (!exiting) return
@@ -593,7 +595,7 @@ export const Dayscape = memo(function Dayscape({
                 opacity={labelOpacity}
                 module={extra.moduleLabel}
                 range={range(p)}
-                left={p.a.kind === 'sleep' ? null : remainingText(p.a.endMin - model.now)}
+                endMin={p.a.kind === 'sleep' ? null : p.a.endMin}
                 maxWidth={Math.max(96, width - 2 - (p.x + p.R + 14))}
               />
             )}
@@ -641,14 +643,15 @@ function NowLabel({
   opacity,
   module,
   range,
-  left: remaining,
+  endMin,
   maxWidth,
 }: {
   p: Placed
   opacity: MotionValue<number>
   module: MotionValue<number>
   range: string
-  left: string | null
+  /** End of the present block (minutes), for the time left; null when it does not apply. */
+  endMin: number | null
   maxWidth: number
 }) {
   const left = p.R + 14
@@ -663,7 +666,7 @@ function NowLabel({
           {p.a.label}
         </span>
         <span className="tabular mt-[8px] block text-[12.5px] leading-none text-ink-2">{range}</span>
-        {remaining && <span className="tabular mt-[6px] block text-[11px] leading-none text-ink-3">{remaining}</span>}
+        {endMin !== null && <Remaining endMin={endMin} />}
       </m.div>
       <m.div aria-hidden className="pointer-events-none absolute flex" style={{ left: 9 * MODULE_SCALE + 12, top: -5.5, opacity: module }}>
         <Label className="text-ink-2">Ahora</Label>
@@ -723,10 +726,15 @@ function Target({ p, mo, pan, pressed, onSelect, range }: { p: Placed; mo: Apert
   )
 }
 
-/** "1 h 46 min restantes", as HOY says it. */
-function remainingText(minutes: number): string | null {
-  if (minutes < 1) return null
-  return `${formatDuration(minutes)} restantes`
+/** "1 h 46 min restantes", as HOY says it, from the app clock: it stays true while DAYSCAPE is open. */
+function Remaining({ endMin }: { endMin: number }) {
+  const { now } = useDay()
+  const left = endMin - minutesOfDay(now)
+  return (
+    <span className="tabular mt-[6px] block text-[11px] leading-none text-ink-3">
+      {left < 1 ? 'terminando' : `${formatDuration(left)} restantes`}
+    </span>
+  )
 }
 
 /** What is left of the message as the field begins: a few pearl points that go. */

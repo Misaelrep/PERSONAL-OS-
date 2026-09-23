@@ -137,6 +137,12 @@ export function revealAtOf(wave: number, indexInWave: number, waveSize: number):
   return s0 + ((indexInWave + 0.3) / waveSize) * (s1 - s0) * 0.8
 }
 
+/**
+ * The reveal takes the time the day needs: the approved ~11 s for a full day
+ * (18 activities), shorter for a light one, a little longer for a crowded one.
+ */
+export const revealSpan = (count: number) => Math.min(1.4, Math.max(0.3, count / 18))
+
 /** Short field label: the short title, the first half of a long "a / b" name, and never two alike. */
 function labelsOf(blocks: ScheduledBlock[]): string[] {
   const out: string[] = []
@@ -195,7 +201,7 @@ export function buildDayscape(view: DayView, now: number): DayscapeModel {
 
   for (let w = 0; w < REVEAL_WINDOWS.length; w++) {
     const members = activities.filter((a) => a.wave === w)
-    members.forEach((a, i) => (a.revealAt = revealAtOf(w, i, members.length)))
+    members.forEach((a, i) => (a.revealAt = revealAtOf(w, i, members.length) * revealSpan(activities.length)))
   }
 
   // The present is a Prism: the clearest, most material configuration.

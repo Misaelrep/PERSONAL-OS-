@@ -40,13 +40,20 @@ export function nameOpacity(a: Pick<Activity, 'revealAt' | 'side'>, t: number): 
   return 1 - (s - NAME.fadeIn - NAME.hold) / NAME.fadeOut
 }
 
-/** The field is clean (only AHORA named) once the last temporary name is gone. */
+/** The field is clean (only AHORA named) once everything has formed and the last temporary name is gone. */
 export function cleanAt(activities: Pick<Activity, 'revealAt' | 'side'>[]): number {
-  return Math.max(...activities.filter((a) => a.side !== 'current').map((a) => nameAt(a) + NAME_S), 0)
+  const names = activities.filter((a) => a.side !== 'current').map((a) => nameAt(a) + NAME_S)
+  const present = activities.filter((a) => a.side === 'current').map((a) => a.revealAt + FORM_S + NOW_LABEL_AFTER + 0.6)
+  return Math.max(0, ...names, ...present)
 }
 
-/** CONTINUAR → appears, quietly, this long after DAYSCAPE began. */
+/** CONTINUAR → appears, quietly, this long after DAYSCAPE began (full day). */
 export const CONTINUE_AT = 14
+
+/** CONTINUAR follows the day: ~14 s for a full day, sooner for a light one, never before the field is clean. */
+export function continueAt(activities: Pick<Activity, 'revealAt' | 'side'>[]): number {
+  return Math.max(cleanAt(activities) + 0.5, CONTINUE_AT * Math.min(1, Math.max(0.3, activities.length / 18)))
+}
 
 /** The exploration hint appears once the field is clean and fades on its own after a while. */
 export const HINT = { after: 0.3, stay: 6 } as const

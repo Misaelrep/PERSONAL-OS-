@@ -6,7 +6,7 @@ import { dateKey, minutesOfDay } from '../../domain/time'
 import { useMotion } from '../../motion/MotionLevel'
 import { EASE } from '../../motion/tokens'
 import { useDay } from '../../state/DayProvider'
-import { CONTINUE_AT, EXIT_STAGES, FORM_S, HINT, cleanAt } from '../dayscape/choreography'
+import { EXIT_STAGES, FORM_S, HINT, cleanAt, continueAt } from '../dayscape/choreography'
 import { DAYSCAPE_STAGES, Dayscape, type DayscapeStage } from '../dayscape/Dayscape'
 import { DayscapeAtmosphere } from '../dayscape/DayscapeAtmosphere'
 import { buildDayscape } from '../dayscape/model'
@@ -81,6 +81,7 @@ export function DailyEntry({ message, onStage, onHandoff, onDone }: DailyEntryPr
   const today = useMemo(() => dateKey(now), [now])
   const [hintSeen] = useState(() => loadEntryMemory().dayscapeHintDate === today)
   const clean = useMemo(() => cleanAt(model.activities), [model])
+  const continueS = useMemo(() => continueAt(model.activities), [model])
   const revealMs = useMemo(
     () =>
       mode.collapse
@@ -121,7 +122,7 @@ export function DailyEntry({ message, onStage, onHandoff, onDone }: DailyEntryPr
       if (next === 'reveal') {
         // CONTINUAR, quietly, from ~14 s; the hint once the field is clean.
         const later = (ms: number, fn: () => void) => timers.current.push(window.setTimeout(fn, ms))
-        later((mode.collapse ? revealMs / 1000 : CONTINUE_AT) * 1000 * speed, () => setShowContinue(true))
+        later((mode.collapse ? revealMs / 1000 : continueS) * 1000 * speed, () => setShowContinue(true))
         if (!touched.current && !mode.collapse) {
           later((clean + HINT.after) * 1000 * speed, () => !touched.current && setHint(true))
           later((clean + HINT.after + HINT.stay) * 1000 * speed, () => setHint(false))
@@ -134,7 +135,7 @@ export function DailyEntry({ message, onStage, onHandoff, onDone }: DailyEntryPr
       const after = SEQUENCE[SEQUENCE.indexOf(next) + 1]
       timer.current = window.setTimeout(() => (after ? go(after) : callbacks.current.onDone()), ms)
     },
-    [durationOf, speed, mode.collapse, revealMs, clean],
+    [durationOf, speed, mode.collapse, revealMs, clean, continueS],
   )
 
   // Starts once; later changes (e.g. the motion level) don't restart the ritual.

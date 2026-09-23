@@ -48,7 +48,7 @@ export interface RoutineBlock {
   /** Default "¿Qué tiene que existir al terminar este bloque?" answer. Editable in HOY. */
   defaultObjective?: string
   /**
-   * Optional override for how DAY FIELD draws the block. Normally derived
+   * Optional override for how DAYSCAPE draws the block. Normally derived
    * from `kind` and duration (see features/dayscape/model.ts).
    */
   visualRole?: 'micro' | 'medium' | 'major' | 'space'
