@@ -2,7 +2,7 @@ import { AnimatePresence, animate, m, motionValue, useTransform, type AnimationP
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from 'react'
 import { ActiveMatrix } from '../../components/dot/ActiveMatrix'
 import { Label } from '../../components/ui/Label'
-import { formatClock } from '../../domain/time'
+import { formatClock, formatDuration } from '../../domain/time'
 import { useViewport } from '../../hooks/useViewport'
 import { EASE } from '../../motion/tokens'
 import { Aperture, MODULE_SCALE, makeMotion, visibleRange, type ApertureMotion } from './Aperture'
@@ -121,7 +121,7 @@ export const Dayscape = memo(function Dayscape({
   }, [fontsReady])
   // Names are measured again once the typeface is ready (`fontsReady`).
   const layout = useMemo(() => {
-    const l = layoutDayscape(model, width, height, measureLabel(model.current.label.toUpperCase(), 12, 0.3, 500))
+    const l = layoutDayscape(model, width, height, measureLabel(model.current.label.toUpperCase(), 13, 0.28, 500))
     placeNames(l, measureLabel, formatClock)
     return l
   }, [model, width, height, fontsReady])
@@ -236,7 +236,7 @@ export const Dayscape = memo(function Dayscape({
       stopPan()
       panAnims.current = [animate(pan.x, 0, t), animate(pan.y, 0, t)]
     }
-    anims.push(animate(extra.labelDim, selected ? 0.5 : 1, t))
+    anims.push(animate(extra.labelDim, selected ? 0.6 : 1, t))
     const leaving = reached(stageRef.current, 'settle')
     anims.push(animate(atmosphere, leaving ? 0.88 : selected ? 0.85 : 1, { duration: 1.2 * speed, ease: EASE }))
     // A mass of pearl-ice light is drawn, very gently, toward what is inspected.
@@ -428,7 +428,7 @@ export const Dayscape = memo(function Dayscape({
 
     // The present: into its Dissolving configuration, then the last to break.
     const nowRec = recs.get(nowId)!
-    at(EXIT.nowMorph, () => startMorph(nowRec, 'dissolving', 0.8, speed))
+    at(EXIT.nowMorph, () => startMorph(nowRec, 'dissolving', 0.6, speed))
     at(EXIT.nowBreak, () => {
       emitMatter(
         matter,
@@ -448,10 +448,20 @@ export const Dayscape = memo(function Dayscape({
       )
     })
     animate(mo(nowId).release, 1, { duration: 1 * speed, delay: sec(EXIT.nowBreak), ease: 'linear' })
-    animate(extra.nowLabel, 0, { duration: sec(500), delay: sec(EXIT.nowBreak + 200), ease: EASE })
+    animate(extra.nowLabel, 0, { duration: sec(450), delay: sec(EXIT.nowBreak + 150), ease: EASE })
 
-    // Convergence: a pearl-silver mass gathers with the matter on AHORA.
-    animate(extra.glow, 0.85, { duration: sec(1400), delay: sec(EXIT.gather - 700), ease: EASE })
+    // Convergence: diffuse → recognizable → structured → named. A pearl-silver mass gathers with
+    // the matter, then withdraws as the module sharpens, gains contrast and settles.
+    const now = mo(nowId)
+    animate(now.blur, 1.4, { duration: sec(500), delay: sec(EXIT.nowBreak + 300), ease: EASE })
+    animate(extra.glow, 0.85, { duration: sec(700), delay: sec(EXIT.gather - 600), ease: EASE })
+    at(EXIT.module[0], () => {
+      const span = sec(EXIT.module[1] - EXIT.module[0])
+      animate(now.blur, 0, { duration: span, ease: [0.2, 0.6, 0.3, 1] })
+      now.grow.jump(1.14)
+      animate(now.grow, 1, { duration: span + sec(200), ease: [0.2, 0.7, 0.2, 1] })
+      animate(extra.glow, 0.3, { duration: span, delay: sec(300), ease: EASE })
+    })
     at(EXIT.gather, () => {
       const pitch = 6 * MODULE_SCALE
       const cells = [-1, 1].flatMap((sx) => [-1, 1].map((sy) => ({ x: anchor.x + sx * pitch, y: anchor.y + sy * pitch, r: MODULE_SCALE, a: 0.35 })))
@@ -459,7 +469,7 @@ export const Dayscape = memo(function Dayscape({
       gathering.current = { start: EXIT.gather, anchor }
     })
     animate(extra.module, 1, { duration: sec(EXIT.module[1] - EXIT.module[0]), delay: sec(EXIT.module[0]), ease: ORGANIC })
-    animate(extra.moduleLabel, 1, { duration: sec(400), delay: sec(EXIT.gather + 900), ease: EASE })
+    animate(extra.moduleLabel, 1, { duration: sec(300), delay: sec(EXIT.named), ease: EASE })
   }, [exiting])
 
   // Reduced motion: the forms fade, the module appears, HOY crossfades in.
@@ -578,7 +588,14 @@ export const Dayscape = memo(function Dayscape({
             module={isNow ? extra.module : undefined}
           >
             {isNow && (
-              <NowLabel p={p} opacity={labelOpacity} module={extra.moduleLabel} range={range(p)} maxWidth={Math.max(96, width - 2 - (p.x + p.R + 14))} />
+              <NowLabel
+                p={p}
+                opacity={labelOpacity}
+                module={extra.moduleLabel}
+                range={range(p)}
+                left={p.a.kind === 'sleep' ? null : remainingText(p.a.endMin - model.now)}
+                maxWidth={Math.max(96, width - 2 - (p.x + p.R + 14))}
+              />
             )}
           </Aperture>
         )
@@ -614,18 +631,39 @@ export const Dayscape = memo(function Dayscape({
 })
 
 /** AHORA keeps its name: AHORA / activity / time; its module takes the name when it forms. */
-function NowLabel({ p, opacity, module, range, maxWidth }: { p: Placed; opacity: MotionValue<number>; module: MotionValue<number>; range: string; maxWidth: number }) {
+/**
+ * AHORA keeps its name: AHORA → activity → time → what is left. A soft pearl
+ * haze (no edge, no card) lifts it off the atmosphere; its module takes the
+ * name when it forms.
+ */
+function NowLabel({
+  p,
+  opacity,
+  module,
+  range,
+  left: remaining,
+  maxWidth,
+}: {
+  p: Placed
+  opacity: MotionValue<number>
+  module: MotionValue<number>
+  range: string
+  left: string | null
+  maxWidth: number
+}) {
   const left = p.R + 14
   return (
     <>
-      <m.div aria-hidden className="pointer-events-none absolute" style={{ left, top: -26, width: maxWidth, opacity }}>
-        <span className="label-spaced block" style={{ fontSize: 10, color: 'var(--ds-now)' }}>
+      <m.div aria-hidden className="pointer-events-none absolute isolate" style={{ left, top: -30, width: maxWidth, opacity }}>
+        <span className="ds-label-haze" />
+        <span className="label-spaced block" style={{ fontSize: 10, fontWeight: 600, color: 'var(--ds-now)' }}>
           Ahora
         </span>
-        <span className="label-spaced mt-[7px] block text-ink" style={{ fontSize: 12, letterSpacing: '0.3em', lineHeight: 1.45 }}>
+        <span className="label-spaced mt-[8px] block text-ink" style={{ fontSize: 13, letterSpacing: '0.28em', lineHeight: 1.4 }}>
           {p.a.label}
         </span>
-        <span className="tabular mt-[7px] block text-[12px] text-ink-3">{range}</span>
+        <span className="tabular mt-[8px] block text-[12.5px] leading-none text-ink-2">{range}</span>
+        {remaining && <span className="tabular mt-[6px] block text-[11px] leading-none text-ink-3">{remaining}</span>}
       </m.div>
       <m.div aria-hidden className="pointer-events-none absolute flex" style={{ left: 9 * MODULE_SCALE + 12, top: -5.5, opacity: module }}>
         <Label className="text-ink-2">Ahora</Label>
@@ -660,7 +698,7 @@ function Inspection({ p, target, speed, range }: { p: Placed; target: { x: numbe
           ✦
         </span>
         <span className="mt-[9px] block text-[13px] leading-tight text-ink-2">{p.a.kindLabel}</span>
-        <span className="label-spaced mt-[7px] block text-ink-4" style={{ fontSize: 9.5, letterSpacing: '0.3em' }}>
+        <span className="label-spaced mt-[7px] block text-ink-3" style={{ fontSize: 9.5, letterSpacing: '0.3em' }}>
           {stateLabel(p.a)}
         </span>
       </m.div>
@@ -683,6 +721,12 @@ function Target({ p, mo, pan, pressed, onSelect, range }: { p: Placed; mo: Apert
       onClick={() => onSelect(p.a.id)}
     />
   )
+}
+
+/** "1 h 46 min restantes", as HOY says it. */
+function remainingText(minutes: number): string | null {
+  if (minutes < 1) return null
+  return `${formatDuration(minutes)} restantes`
 }
 
 /** What is left of the message as the field begins: a few pearl points that go. */

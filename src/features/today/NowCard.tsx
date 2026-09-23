@@ -94,7 +94,13 @@ function TimeLine({ block, now }: { block: ScheduledBlock; now: number }) {
         />
       </div>
       <span className="tabular shrink-0 text-[13px] text-ink-3">
-        {left < 1 ? 'terminando' : `${formatDuration(left)} restantes`}
+        {left < 1 ? (
+          'terminando'
+        ) : (
+          <>
+            <span className="text-ink-2">{formatDuration(left)}</span> restantes
+          </>
+        )}
       </span>
     </div>
   )
@@ -158,7 +164,7 @@ function Body({ block, onStartFocus }: { block: ScheduledBlock; onStartFocus: (i
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="mt-10 flex flex-col gap-2 sm:mt-12 sm:flex-row sm:items-center"
+            className="mt-10 flex flex-col gap-3 sm:mt-12 sm:flex-row sm:items-center sm:gap-2"
           >
             {deep ? (
               <Button className="w-full sm:w-auto" onClick={() => onStartFocus(block.id)}>
@@ -173,11 +179,11 @@ function Body({ block, onStartFocus }: { block: ScheduledBlock; onStartFocus: (i
             )}
             <div className="flex justify-center gap-1 sm:ml-auto">
               {deep && (
-                <Button variant="quiet" onClick={() => setClosing(true)}>
+                <Button variant="secondary" onClick={() => setClosing(true)}>
                   Cerrar bloque
                 </Button>
               )}
-              <Button variant="quiet" onClick={() => dispatch({ type: 'skip', blockId: block.id })}>
+              <Button variant="secondary" onClick={() => dispatch({ type: 'skip', blockId: block.id })}>
                 Omitir
               </Button>
             </div>

@@ -309,20 +309,20 @@ export function assignFates(motes: Mote[], anchor: { x: number; y: number }, cel
     .forEach((m, i) => {
       m.fate = 'module'
       m.cell = ordered[i]
-      m.delay = 120
-      m.dur = 1100
+      m.delay = 100
+      m.dur = 900
     })
   const rest = sorted.slice(cells.length)
   const absorbed = Math.round(rest.length * 0.25)
   rest.forEach((m, i) => {
     if (i < absorbed) {
       m.fate = 'absorb'
-      m.delay = rand() * 300
-      m.dur = 850 + rand() * 350
+      m.delay = rand() * 250
+      m.dur = 650 + rand() * 250
     } else {
       m.fate = 'fade'
-      m.delay = rand() * 400
-      m.dur = 600 + rand() * 450
+      m.delay = rand() * 250
+      m.dur = 450 + rand() * 350
     }
   })
   for (const m of motes) {

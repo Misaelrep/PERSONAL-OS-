@@ -80,25 +80,41 @@ export function exploreMorphs(until: number): MorphEvent[] {
 /* Exit: FORMS → FRAGMENTS → PARTICLE FIELD → CONVERGENCE → HOY               */
 /* ------------------------------------------------------------------------ */
 
-/** Milliseconds from CONTINUAR. */
+/**
+ * Milliseconds from CONTINUAR. Every step must read as progress, never as a
+ * near-identical variation of the previous frame:
+ *   forms → fragments (0.4–2 s) → particle field → AHORA breaks (2 s) →
+ *   convergence (2.7 s): diffuse → recognizable → structured → named (3.5 s) →
+ *   HOY (3.9–5.3 s).
+ */
 export const EXIT = {
   /** Calm: selection closes, the field returns to its place, morphs finish. */
-  calm: 600,
+  calm: 400,
   /** The far plane lets go first, then the middle, then the near one. */
-  release: { bg: 600, mid: 980, fg: 1360 },
+  release: { bg: 400, mid: 650, fg: 900 },
   /** Spread inside a plane, so no two forms break in the same instant. */
-  jitter: 300,
+  jitter: 250,
   /** The present turns into its Dissolving configuration while the rest is already matter… */
-  nowMorph: 2000,
+  nowMorph: 1400,
   /** …and is the last to break. */
-  nowBreak: 2800,
+  nowBreak: 2050,
   /** Matter converges on AHORA. */
-  gather: 3700,
-  /** The modular core becomes the 3 × 3 AHORA module. */
-  module: [3850, 4950] as const,
+  gather: 2700,
+  /** The modular core becomes the 3 × 3 AHORA module: it sharpens, gains contrast and settles. */
+  module: [2800, 3700] as const,
+  /** The module takes its name: it can be acted upon. */
+  named: 3450,
   /** HOY mounts underneath and the module lands on its AHORA. */
-  handoff: 5000,
-  done: 6600,
+  handoff: 3900,
+  done: 5300,
+} as const
+
+/** Duration of each exit stage of the entry (ms), from the timeline above. */
+export const EXIT_STAGES = {
+  settle: EXIT.calm,
+  dematerialize: EXIT.nowBreak - EXIT.calm,
+  gather: EXIT.handoff - EXIT.nowBreak,
+  handoff: EXIT.done - EXIT.handoff,
 } as const
 
 /** When (ms after CONTINUAR) an activity starts to come apart. */

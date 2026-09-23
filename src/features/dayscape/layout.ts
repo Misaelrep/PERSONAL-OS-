@@ -75,14 +75,18 @@ const PLANES: Record<Plane, { r: [number, number]; lift: [number, number]; past:
 
 const clamp = (x: number, a: number, b: number) => Math.min(b, Math.max(a, x))
 
-/** Size, presence and softness by plane; the past a little dimmer and softer. */
+/**
+ * Size, presence and softness by plane; the past a little dimmer and softer.
+ * Everything that is not AHORA stays in the atmosphere: present, never
+ * asking for the same attention.
+ */
 export function depthLook(a: Pick<Activity, 'side' | 'plane' | 'f'>) {
   if (a.side === 'current') return { scale: 1, opacity: 1, blur: 0 }
   const past = a.side === 'past'
   return {
     scale: { fg: 1.12, mid: 0.72, bg: 0.46 }[a.plane] * (1 - 0.12 * a.f),
-    opacity: { fg: 0.95, mid: 0.72, bg: 0.52 }[a.plane] * (past ? 0.95 : 1),
-    blur: { fg: 0, mid: 0.55, bg: 1.25 }[a.plane] * (past ? 1.2 : 1),
+    opacity: { fg: 0.84, mid: 0.6, bg: 0.42 }[a.plane] * (past ? 0.92 : 1),
+    blur: { fg: 0, mid: 0.75, bg: 1.6 }[a.plane] * (past ? 1.2 : 1),
   }
 }
 
@@ -140,8 +144,11 @@ export function layoutDayscape(model: DayscapeModel, width: number, height: numb
     return { ...base, ...toScreen(Math.cos(angle) * r * 0.92 + jitter, Math.sin(angle) * r - lift) }
   })
 
-  // Nothing overlaps, and AHORA's name keeps its room to the right of the present.
-  const obstacles = [0, 1, 2, 3, 4, 5].map((i) => ({ x: anchor.x + 64 + i * 25, y: anchor.y, R: 18, fixed: true }))
+  // Nothing overlaps, and AHORA's name keeps clear room to the right of the present.
+  const obstacles = [0, 1, 2, 3, 4, 5].flatMap((i) => [
+    { x: anchor.x + 64 + i * 25, y: anchor.y - 4, R: 21, fixed: true },
+    { x: anchor.x + 64 + i * 25, y: anchor.y + 24, R: 17, fixed: true },
+  ])
   const all: { x: number; y: number; R: number; fixed?: boolean }[] = [...items, ...obstacles]
   for (let n = 0; n < 200; n++) {
     for (let i = 0; i < all.length; i++)
@@ -208,7 +215,7 @@ export const rangeText = (a: Pick<Activity, 'startMin' | 'endMin'>, clock: (m: n
 export function placeNames(layout: DayscapeLayout, measure: Measure, clock: (m: number) => string): void {
   const { items, anchor, width, height } = layout
   const current = items.find((p) => p.a.side === 'current')
-  const taken = [{ x: anchor.x + (current?.R ?? 34) + 10, y: anchor.y - 30, w: 130, h: 58 }]
+  const taken = [{ x: anchor.x + (current?.R ?? 34) + 8, y: anchor.y - 34, w: 150, h: 80 }]
   const overlap = (b: Box, t: Box) =>
     Math.max(0, Math.min(b.x + b.w, t.x + t.w) - Math.max(b.x, t.x)) * Math.max(0, Math.min(b.y + b.h, t.y + t.h) - Math.max(b.y, t.y))
   const rank = { fg: 0, mid: 1, bg: 2 }
@@ -309,7 +316,8 @@ export function selectionPoses(layout: DayscapeLayout, selectedId: string): Map<
       dx,
       dy,
       grow: 1,
-      opacity: p.opacity * (1 - (p.a.side === 'current' ? 0.4 : neighbour ? 0.3 : 0.55)),
+      // AHORA stays recognizable while something else is inspected.
+      opacity: p.opacity * (1 - (p.a.side === 'current' ? 0.3 : neighbour ? 0.3 : 0.55)),
       blur: p.blur + (neighbour ? 0.35 : 0.8),
     })
   }

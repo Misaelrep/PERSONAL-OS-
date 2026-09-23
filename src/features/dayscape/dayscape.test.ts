@@ -4,7 +4,7 @@ import { buildDayView } from '../../domain/schedule'
 import { formatClock, toMinutes } from '../../domain/time'
 import type { DayRoutine, DayState } from '../../domain/types'
 import { dayReducer, emptyDay } from '../../state/dayReducer'
-import { CONTINUE_AT, EXIT, NAME, NAME_S, cleanAt, exploreMorphs, nameAt, nameOpacity, releaseAtMs } from './choreography'
+import { CONTINUE_AT, EXIT, EXIT_STAGES, NAME, NAME_S, cleanAt, exploreMorphs, nameAt, nameOpacity, releaseAtMs } from './choreography'
 import { hitTest, layoutDayscape, placeNames, selectionPoses, targetOf, type Measure } from './layout'
 import { buildDayscape, getVisualRole, stateLabel } from './model'
 
@@ -156,6 +156,17 @@ describe('DAYSCAPE — progressive reveal', () => {
     expect(EXIT.gather - EXIT.calm).toBeGreaterThanOrEqual(2000)
     expect(EXIT.gather - EXIT.calm).toBeLessThanOrEqual(3200)
   })
+
+  it('the way to HOY reads as progress: compact, every step a distinct advance', () => {
+    const steps = [EXIT.calm, EXIT.release.fg, EXIT.nowBreak, EXIT.gather, EXIT.module[0], EXIT.named, EXIT.handoff, EXIT.done]
+    for (let i = 1; i < steps.length; i++) expect(steps[i] - steps[i - 1]).toBeGreaterThanOrEqual(100)
+    expect(EXIT.done).toBeLessThanOrEqual(5500)
+    // Diffuse → recognizable → structured → named, before HOY takes over.
+    expect(EXIT.named).toBeGreaterThan(EXIT.module[0])
+    expect(EXIT.module[1]).toBeLessThanOrEqual(EXIT.handoff)
+    const { settle, dematerialize, gather, handoff } = EXIT_STAGES
+    expect(settle + dematerialize + gather + handoff).toBe(EXIT.done)
+  })
 })
 
 describe('DAYSCAPE — composition', () => {
@@ -172,6 +183,16 @@ describe('DAYSCAPE — composition', () => {
       expect(p.opacity).toBeLessThan(1)
     }
     expect(now.blur).toBe(0)
+  })
+
+  it('the rest of the day stays in the atmosphere: present, never competing with AHORA', () => {
+    for (const p of phone.items) {
+      if (p.a.side === 'current') continue
+      expect(p.opacity).toBeLessThanOrEqual(0.84)
+      if (p.a.plane !== 'fg') expect(p.blur).toBeGreaterThanOrEqual(0.75)
+    }
+    const poses = selectionPoses(phone, 'ingles')
+    expect(poses.get('paginas-web')!.opacity).toBeGreaterThanOrEqual(0.7)
   })
 
   it('three planes: far is smaller, softer and higher', () => {

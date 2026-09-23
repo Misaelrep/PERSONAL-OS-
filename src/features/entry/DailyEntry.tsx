@@ -6,7 +6,7 @@ import { dateKey, minutesOfDay } from '../../domain/time'
 import { useMotion } from '../../motion/MotionLevel'
 import { EASE } from '../../motion/tokens'
 import { useDay } from '../../state/DayProvider'
-import { CONTINUE_AT, FORM_S, HINT, cleanAt } from '../dayscape/choreography'
+import { CONTINUE_AT, EXIT_STAGES, FORM_S, HINT, cleanAt } from '../dayscape/choreography'
 import { DAYSCAPE_STAGES, Dayscape, type DayscapeStage } from '../dayscape/Dayscape'
 import { DayscapeAtmosphere } from '../dayscape/DayscapeAtmosphere'
 import { buildDayscape } from '../dayscape/model'
@@ -31,10 +31,7 @@ type Timed = Exclude<EntryStage, 'message' | 'reveal' | 'explore'>
 const STAGE_MS: Record<Timed, number> = {
   atmosphere: 1300,
   dissolve: 500,
-  settle: 600,
-  dematerialize: 2200,
-  gather: 2200,
-  handoff: 1600,
+  ...EXIT_STAGES,
 }
 
 /** Reduced motion: crossfades only. */
@@ -267,31 +264,39 @@ export function DailyEntry({ message, onStage, onHandoff, onDone }: DailyEntryPr
         />
       )}
 
-      {/* Once the field is clean, a quiet word on how to explore it. Gone at the first touch, for the day. */}
+      {/* Once the field is clean, a quiet word on how to explore it — with a small gesture, tap then drag.
+          Gone at the first touch, for the day. */}
       <AnimatePresence>
         {hint && exploring && (
-          <m.p
+          <m.div
             key="hint"
             aria-hidden
-            className="label-spaced pointer-events-none absolute inset-x-0 z-[80] px-6 text-center text-ink-4"
-            style={{ bottom: 'calc(max(env(safe-area-inset-bottom), 26px) + 56px)', fontSize: 9, letterSpacing: '0.3em', lineHeight: 1.9 }}
+            className="pointer-events-none absolute inset-x-0 z-[80] flex flex-col items-center px-4"
+            style={{ bottom: 'calc(max(env(safe-area-inset-bottom), 26px) + 58px)' }}
             initial={{ opacity: 0, filter: 'blur(3px)' }}
-            animate={{ opacity: 0.75, filter: 'blur(0px)' }}
+            animate={{ opacity: 1, filter: 'blur(0px)' }}
             exit={{ opacity: 0, filter: 'blur(3px)' }}
             transition={{ duration: 1.1 * speed, ease: EASE }}
           >
-            <span className="whitespace-nowrap">Toca para explorar ·</span> <span className="whitespace-nowrap">Arrastra para recorrer</span>
-          </m.p>
+            <span className="ds-gesture">
+              <i />
+            </span>
+            <p className="ds-action label-spaced text-center text-ink-3" style={{ fontSize: 9.5, letterSpacing: '0.24em', lineHeight: 1.9 }}>
+              <span className="whitespace-nowrap">Toca para explorar ·</span>{' '}
+              <span className="whitespace-nowrap">Arrastra para recorrer</span>
+            </p>
+          </m.div>
         )}
       </AnimatePresence>
 
-      {/* A quiet way on. It never skips the transition. */}
+      {/* A quiet way on, recognizable as an action: a hairline breathes under it and its arrow leans forward.
+          It never skips the transition. */}
       <AnimatePresence>
         {showContinue && exploring && (
           <m.div
             key="continue"
             className="pointer-events-none absolute inset-x-0 z-[80] flex justify-center"
-            style={{ bottom: 'max(env(safe-area-inset-bottom), 26px)' }}
+            style={{ bottom: 'max(env(safe-area-inset-bottom), 22px)' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -299,14 +304,14 @@ export function DailyEntry({ message, onStage, onHandoff, onDone }: DailyEntryPr
           >
             <button
               type="button"
-              className="label-spaced pointer-events-auto px-4 py-3 text-ink-3 opacity-70 transition-opacity duration-300 hover:opacity-100"
-              style={{ fontSize: 10 }}
+              className="ds-action ds-continue label-spaced pointer-events-auto px-5 pt-3 pb-4 text-ink-2 hover:text-ink"
+              style={{ fontSize: 10.5 }}
               onClick={(e) => {
                 e.stopPropagation()
                 onContinue()
               }}
             >
-              Continuar <span aria-hidden>→</span>
+              Continuar <span aria-hidden className="ds-continue-arrow">→</span>
             </button>
           </m.div>
         )}

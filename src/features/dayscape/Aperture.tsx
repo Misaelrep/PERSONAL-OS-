@@ -114,15 +114,16 @@ function Fragment({ p, rec, mo, i, reduced }: FragmentProps) {
   const pathSpacing = useTransform(() => dash.get().spacing)
   const strokeOpacity = useTransform(() => {
     const f = frag()
-    const gain = now ? 1.15 : space ? 0.55 : a.side === 'future' ? 0.78 : 1
-    return Math.min(now ? 0.97 : 0.95, f.stroke * 1.45 * gain) * dash.get().stroke * (reduced ? 1 : smooth(0.02, 0.1, mo.reveal.get()))
+    // AHORA: the most material form of the field — sharper and more contrasted, never louder.
+    const gain = now ? 1.35 : space ? 0.55 : a.side === 'future' ? 0.78 : 1
+    return Math.min(now ? 0.98 : 0.95, f.stroke * 1.45 * gain) * dash.get().stroke * (reduced ? 1 : smooth(0.02, 0.1, mo.reveal.get()))
   })
   const fillOpacity = useTransform(() => {
     const f = frag()
-    const gain = now ? 1.3 : a.side === 'future' ? 1.7 : 1
+    const gain = now ? 1.6 : a.side === 'future' ? 1.7 : 1
     return f.fill * 1.8 * gain * dash.get().fill * (reduced ? 1 : smooth(0.5, 1, mo.reveal.get()))
   })
-  const strokeWidth = useTransform(() => (now ? 1.45 : p.R * mo.grow.get() > 16 ? 1.35 : 1.15) * frag().width)
+  const strokeWidth = useTransform(() => (now ? 1.6 : p.R * mo.grow.get() > 16 ? 1.35 : 1.15) * frag().width)
   return (
     <m.path
       d={d}
@@ -187,7 +188,7 @@ function NowCore({ c0, module, pulse }: { c0: number; module: MotionValue<number
   const coreR = useTransform(() => c0 + (2.2 * S - c0) * module.get())
   const before = useTransform(() => 1 - smooth(0.35, 0.7, module.get()))
   const after = useTransform(() => smooth(0.35, 0.7, module.get()))
-  const satBefore = useTransform(() => 0.55 * before.get())
+  const satBefore = useTransform(() => 0.68 * before.get())
   const satAfter = useTransform(() => 0.6 * after.get())
   return (
     <g>
@@ -217,7 +218,9 @@ function TempName({ p, delay, speed }: { p: Placed; delay: number; speed: number
   const spot = p.name
   if (!spot) return null
   const st = NAME_STYLE[p.a.plane]
-  const tone = { fg: ['var(--ink)', 'var(--ink-2)'], mid: ['var(--ink-2)', 'var(--ink-3)'], bg: ['var(--ink-3)', 'var(--ink-4)'] }[p.a.plane]
+  // Names of the rest of the day: present, lighter than AHORA's.
+  const tone = { fg: ['var(--ink-2)', 'var(--ink-3)'], mid: ['var(--ink-3)', 'var(--ink-4)'], bg: ['var(--ink-4)', 'var(--ink-4)'] }[p.a.plane]
+  const weight = p.a.plane === 'fg' ? 450 : 400
   const life = `${NAME_S * speed}s`
   const vars = { '--life': life, '--b': `${st.blur}px`, '--ls': `${st.spacing}em` } as CSSProperties
   return (
@@ -228,7 +231,7 @@ function TempName({ p, delay, speed }: { p: Placed; delay: number; speed: number
     >
       <span
         className="ds-name-label"
-        style={{ fontSize: st.size, letterSpacing: `${st.spacing}em`, color: tone[0], animationDelay: `${delay * speed}s` }}
+        style={{ fontSize: st.size, fontWeight: weight, letterSpacing: `${st.spacing}em`, color: tone[0], animationDelay: `${delay * speed}s` }}
       >
         {p.a.label}
       </span>

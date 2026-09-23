@@ -746,7 +746,7 @@
   --ds-past: #8793a4;
   --ds-future: #98b1cc;
   --ds-now-line: #7f98b6;
-  --ds-now-core: #9db7d4;
+  --ds-now-core: #8aa8cd;
   /* AHORA: an ice / silver blue. It leads by sharpness, matter, scale and stillness, not by saturation. */
   --ds-now: #6b8fbf;
   --ds-facet: #c7d9e9;
@@ -1004,6 +1004,23 @@
   100% { opacity: 0; }
 }
 
+/* AHORA's name: a soft pearl haze lifts it off the atmosphere — no edge, no card. */
+.ds-label-haze {
+  position: absolute;
+  left: -22px;
+  top: -18px;
+  right: -14px;
+  bottom: -18px;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.4) 55%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+}
+
+:root[data-tone='deep'] .ds-label-haze {
+  background: radial-gradient(closest-side, rgba(12, 30, 56, 0.6), rgba(12, 30, 56, 0.28) 55%, transparent 100%);
+}
+
 /* Inspection: a faint refractive haze behind the information, no card. */
 .ds-haze {
   position: absolute;
@@ -1035,6 +1052,115 @@
   background: radial-gradient(closest-side, rgba(190, 210, 250, 0.22), rgba(150, 180, 240, 0.1) 50%, transparent);
 }
 
+/* Actions stay quiet but read as actions: a pearl haze separates them from the ground. */
+.ds-action {
+  position: relative;
+  isolation: isolate;
+}
+
+.ds-action::before {
+  content: '';
+  position: absolute;
+  inset: -14px -28px;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.36) 60%, rgba(255, 255, 255, 0) 100%);
+  pointer-events: none;
+}
+
+:root[data-tone='deep'] .ds-action::before {
+  background: radial-gradient(closest-side, rgba(12, 30, 56, 0.55), rgba(12, 30, 56, 0.25) 60%, transparent 100%);
+}
+
+/* A small gesture: a point touches (ring), then drags. */
+.ds-gesture {
+  position: relative;
+  display: block;
+  width: 34px;
+  height: 12px;
+  margin-bottom: 8px;
+}
+
+.ds-gesture::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--ds-now) 45%, transparent), transparent);
+}
+
+.ds-gesture > i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  border-radius: 50%;
+  background: var(--ds-now);
+  opacity: 0;
+  animation: ds-gesture 3.4s ease-in-out infinite;
+}
+
+.ds-gesture > i::after {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--ds-now) 60%, transparent);
+  opacity: 0;
+  animation: ds-tap 3.4s ease-out infinite;
+}
+
+@keyframes ds-gesture {
+  0% { transform: translateX(-12px); opacity: 0; }
+  8% { opacity: 0.85; }
+  28% { transform: translateX(-12px); }
+  62% { transform: translateX(12px); opacity: 0.85; }
+  78%, 100% { transform: translateX(12px); opacity: 0; }
+}
+
+@keyframes ds-tap {
+  0%, 6% { transform: scale(0.4); opacity: 0; }
+  10% { opacity: 0.7; }
+  26% { transform: scale(1.5); opacity: 0; }
+  100% { opacity: 0; }
+}
+
+/* CONTINUAR: a hairline breathes under it; its arrow leans forward now and then. */
+.ds-continue {
+  transition: color 0.3s var(--ease-astral);
+}
+
+.ds-continue::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  width: 28px;
+  height: 1px;
+  margin-left: -14px;
+  background: color-mix(in srgb, var(--ds-now) 65%, transparent);
+  animation: ds-breath 2.8s ease-in-out infinite;
+}
+
+.ds-continue-arrow {
+  display: inline-block;
+  animation: ds-nudge 2.8s ease-in-out infinite;
+}
+
+@keyframes ds-breath {
+  0%, 100% { opacity: 0.35; transform: scaleX(0.75); }
+  50% { opacity: 0.85; transform: scaleX(1); }
+}
+
+@keyframes ds-nudge {
+  0%, 58%, 100% { transform: translateX(0); }
+  74% { transform: translateX(3px); }
+}
+
 /* Invisible targets: keyboard focus still shows where it is. */
 .ds-target {
   position: absolute;
@@ -1051,6 +1177,10 @@
 }
 
 :root[data-motion='reducido'] .ds-blob,
+:root[data-motion='reducido'] .ds-gesture > i,
+:root[data-motion='reducido'] .ds-gesture > i::after,
+:root[data-motion='reducido'] .ds-continue::after,
+:root[data-motion='reducido'] .ds-continue-arrow,
 :root[data-motion='reducido'] .ds-drift,
 :root[data-motion='reducido'] .ds-leak,
 :root[data-motion='reducido'] .ds-sheen,
@@ -1060,6 +1190,11 @@
 
 :root[data-motion='reducido'] .ds-leak {
   opacity: 0.3;
+}
+
+:root[data-motion='reducido'] .ds-gesture > i,
+:root[data-motion='reducido'] .ds-continue::after {
+  opacity: 0.7;
 }
 
 :root[data-motion='reducido'] .ds-name > span {
