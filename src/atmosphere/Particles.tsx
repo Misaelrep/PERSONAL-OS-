@@ -7,8 +7,8 @@ import { EASE } from '../motion/tokens'
 /**
  * DISPERSIÓN → AGRUPACIÓN → CONCENTRACIÓN → LIBERACIÓN.
  * A handful of slow points: peripheral in HOY, drawn toward the center in
- * Focus, released outward when Focus ends. `handed-off` hands them to the
- * DAY FIELD, which redraws them as the day's first nodes.
+ * Focus, released outward when Focus ends. `handed-off` rests them while
+ * DAYSCAPE shows the day in its own atmosphere.
  */
 export type ParticleMode = 'dispersed' | 'gathering' | 'converged' | 'released' | 'handed-off'
 
@@ -62,23 +62,10 @@ function makeParticles(count: number): Particle[] {
   return list
 }
 
-const COMPACT = 9
-const WIDE = 16
-
-/**
- * Resting places (vw / vh) of the points visible in HOY's light scene, which
- * shows every other particle.
- */
-export function ambientPoints(compact: boolean): [number, number][] {
-  return makeParticles(compact ? COMPACT : WIDE)
-    .filter((_, i) => i % 2 === 0)
-    .map((p) => p.home)
-}
-
 export function Particles({ mode }: { mode: ParticleMode }) {
   const { particles: enabled, ambient } = useMotion()
   const compact = useMediaQuery('(max-width: 640px)')
-  const list = useMemo(() => makeParticles(compact ? COMPACT : WIDE), [compact])
+  const list = useMemo(() => makeParticles(compact ? 9 : 16), [compact])
 
   if (!enabled) return null
 

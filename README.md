@@ -16,7 +16,7 @@ npm run build      # typecheck + build de producción
 | `?t=10:14` | El reloj arranca a esa hora y sigue corriendo desde ahí. |
 | `?motion=completo` · `sutil` · `reducido` | Fuerza un nivel de movimiento (por defecto: `reducido` si el sistema pide `prefers-reduced-motion`, si no `completo`). |
 | `?entry=full` · `micro` · `none` | Fuerza la entrada diaria completa, la micro entrada o ninguna, ignorando las reglas de sesión (no guarda nada). |
-| `?field=hold` · `collapse` · `fast` | Revisión del DAY FIELD: `hold` lo mantiene vivo e inspeccionable sin salida automática (CONTINUAR sigue funcionando); `collapse` acorta mensaje y exploración para revisar estabilización → desmaterialización → partículas → HOY a velocidad normal; `fast` acelera toda la entrada. Se pueden combinar (`fast,hold`). Sin el parámetro, nada cambia. |
+| `?field=collapse` · `fast` · `hold` | Revisión de DAYSCAPE: `collapse` acorta el mensaje, forma el día de golpe (sin nombres) y sale solo tras 1,2 s para revisar FORMAS → FRAGMENTOS → PARTÍCULAS → CONVERGENCIA → HOY a velocidad normal; `fast` acelera toda la entrada; `hold` impide la salida automática de `collapse`. Se pueden combinar (`fast,collapse`). Sin el parámetro, nada cambia: DAYSCAPE solo sale con CONTINUAR. |
 
 Momentos útiles: `06:10` (meditación activa), `07:10` (meditación pendiente → ¿mover a las 9:30?), `08:29` (transición entre bloques), `10:14` (Páginas Web, bloque profundo con objetivo), `12:05` (recuperación), `14:10` (bloque profundo sin objetivo), `17:00` (cuerpo), `19:30` (segundo pico), `21:00` (cierre, atmósfera profunda), `04:00` (noche).
 
@@ -25,41 +25,35 @@ El estado del día se guarda en `localStorage` por fecha (`personal-os:day:YYYY-
 ## Entrada diaria
 
 ```
-ABRIR APP → ATMÓSFERA VIVA → MENSAJE → EL MENSAJE SE DISUELVE → DAY FIELD (≥ 15 s, vivo e inspeccionable)
-→ ESTABILIZACIÓN → LAS FORMAS SE DESMATERIALIZAN → PARTÍCULAS → CONVERGEN EN AHORA → HOY SE MATERIALIZA
+ABRIR APP → MENSAJE → EL MENSAJE SE DISUELVE → DAYSCAPE (el día entero se forma por oleadas; explorar sin límite)
+→ CONTINUAR → FORMAS → FRAGMENTOS → CAMPO DE PARTÍCULAS → CONVERGENCIA EN AHORA → HOY EMERGE DE LA MISMA ATMÓSFERA
 ```
 
-- **Primera apertura real del día** (fecha local): entrada completa, automática (≈ 30 s en total, de ellos ≥ 15 s de campo). Un toque durante el mensaje lo hace avanzar; en el campo, los toques inspeccionan. `dailyEntrySeenDate` se guarda cuando HOY ya está en pantalla: si la app se cierra antes, el ritual vuelve a aparecer.
+- **Primera apertura real del día** (fecha local): entrada completa. Un toque durante el mensaje lo hace avanzar; en DAYSCAPE, los toques exploran. DAYSCAPE no sale solo: **CONTINUAR →** aparece, discreto, a los ~14 s. `dailyEntrySeenDate` se guarda cuando HOY ya está en pantalla: si la app se cierra antes, el ritual vuelve a aparecer.
 - **Mismo día, vuelta tras ≥ 30 min**: micro entrada (≈1,7 s): atmósfera breve → *¿Listo para volver?* → HOY.
 - **Mismo día, vuelta en < 30 min**: HOY directamente.
 - Cambiar de pestaña, bloquear el teléfono o volver de otra app no dispara nada: se decide una vez por carga de página. Si cambia el día con la app abierta, la entrada del nuevo día llega en la siguiente apertura real.
 - Con una sesión de Focus en curso no se muestra ninguna entrada.
 - **Mensaje del día**: biblioteca editorial local en `src/data/dailyMessages.ts`, sin IA ni red. Se elige con `díaDelAño % mensajes` y se guarda `dailyMessageId` con la fecha, así todo el día muestra el mismo.
-- Memoria en `localStorage` → `personal-os:entry` (`dailyEntrySeenDate`, `dailyMessage`, `lastActiveAt`).
+- Memoria en `localStorage` → `personal-os:entry` (`dailyEntrySeenDate`, `dailyMessage`, `lastActiveAt`, `dayscapeHintDate`).
 
-### DAY FIELD
+### DAYSCAPE (V0.7)
 
-El día como campo alrededor del presente, visto una vez al entrar. No es un calendario.
+Todo el día a la vez, alrededor del presente (arquitectura D aprobada: radial alrededor de AHORA + profundidad y parallax). No hay línea ni trayectoria: el tiempo es **profundidad y materia**.
 
-- **Mismos datos que HOY**: se construye con `buildDayView` (sin duplicar horarios). Inicio y fin salen de la rutina: primer bloque → inicio de Dormir. Nada está fijado al martes ni a las 06:00/22:00.
-- **Gramática**: posición = orden · distancia al presente = distancia temporal (algo comprimida lejos de ahora) · tamaño = peso del bloque · nitidez y opacidad = cercanía temporal · halo = intensidad / estado energético · densidad de micro-puntos = concentración · espacio abierto = recuperación y transiciones · pulso del presente = estado energético.
-- **Roles** (`getVisualRole`, derivados del tipo de bloque; `visualRole` en la rutina los sobrescribe): micro, medio, mayor, espacio (sin nodo: trayectoria abierta y luz difusa) y extremo (Dormir). El bloque actual siempre es el nodo presente.
-- **Tiempo y ejecución separados**: pasado / presente / futuro sale del reloj; completado (núcleo sólido), parcial (medio núcleo), omitido (anillo abierto) y sin registrar (anillo hueco) salen **solo** del estado guardado, en el núcleo de cada forma. Un bloque pasado sin registro nunca se muestra como hecho. El campo no modifica el estado.
-- **Composición**: el presente anclado (móvil ≈ 45 % × 44 %), trayectoria en S abierta y fragmentada; los nodos se apartan unos píxeles de la línea para que sea un campo, no una timeline. Por la mañana casi todo está delante; por la noche, detrás. Como máximo tres nombres.
-
-#### Polymorphic Aperture System (V0.6)
-
-Una sola materia visual con cinco configuraciones: **A · Cardinal perlado** (esquinas abiertas), **B · Órbita astral hielo** (arcos incompletos), **C · Apertura hielo disolvente** (segmentos irregulares), **D · Eje azul-plata** (ejes desplazados) y **E · Prisma perlado hielo** (láminas facetadas translúcidas).
-
-- **No codifican el tipo de actividad**: son el estado dinámico de la materia. Se reparten por el campo de forma que los vecinos no se repiten y las cinco coexisten.
-- **Misma materia**: cada forma son los mismos seis fragmentos curvos alrededor de un núcleo modular (núcleo + cuatro satélites), así que cualquier forma se transforma en otra moviendo sus fragmentos: es *morph*, no un fundido. Cadena: Cardinal → Órbita → Prisma → Eje → Disolvente.
-- **Coreografía** (`morphPlan`): 90 % quietud. Entre los 3 y los 15 s, uno o dos nodos secundarios cambian a la vez, en zonas distintas, cada vez más sutil. AHORA recorre las cinco configuraciones y siempre termina en Apertura disolvente antes del colapso.
-- **Luz**: color en halos, reflejos y profundidad, no en rellenos. Cada forma tiene su Astral Fade irregular (perla, plata, hielo y un violeta casi invisible) que nace, deriva, se expande y vuelve. Deriva de pocos píxeles y micro-reflejos ocasionales; el presente es lo más estable.
-- **Inspección**: tocar cualquier nodo detiene su morph, lo acerca, lo enfoca y atenúa el resto; aparece una microcard (nombre, horario, tipo · estado, objetivo y pendiente si existen), sin acciones. Tocar fuera o Esc la cierra; unos 800 ms después el nodo retoma su ciclo. Con una microcard abierta el campo nunca sale solo: espera a que se cierre y luego ≈ 2 s. Hacia los 12 s aparece, discreto, **CONTINUAR →**, que empieza la transición (no salta a HOY).
-- **Desmaterialización diferenciada**: Cardinal separa sus esquinas y las erosiona; Órbita fragmenta sus arcos, que siguen girando; Disolvente se erosiona desde los extremos; Eje se rompe del centro hacia fuera; Prisma pierde el borde y sus facetas se separan como láminas de luz. Todas acaban como **la misma partícula** (canvas, solo para las partículas). Lo lejano se deshace primero; AHORA, el último.
-- **Partículas → AHORA → HOY**: la materia converge en AHORA; la mayor parte se disuelve, una parte la absorbe el presente y cuatro partículas completan, junto al núcleo y sus satélites, el módulo 3 × 3, que aterriza sobre el marcador AHORA de HOY mientras HOY se materializa.
-- **Movimiento reducido**: las cinco formas siguen presentes (variedad estática), sin morph, deriva ni trayectorias de partículas; fundidos hacia AHORA y HOY.
-- Código: `src/features/dayfield/` — `model.ts` (modelo), `geometry.ts` (composición), `forms.ts` (las cinco formas, morph, reparto y coreografía), `particles.ts` (materia), `FormNode.tsx`, `AstralFade.tsx`, `ParticleCanvas.tsx`, `MicroCard.tsx`, `DayField.tsx`.
+- **Mismos datos que HOY** (`buildDayView`): las 18 actividades del martes, transiciones incluidas (los huecos sintéticos no). Nada fijado al martes.
+- **Tres planos**: primer plano (hasta 1 h de pasado / ~2 h de futuro), plano medio y fondo; lo lejano es más pequeño, más difuso y está más alto. El pasado está erosionado (plata, suelta materia); el futuro, todavía formándose (hielo, incompleto). **AHORA** es el centro perceptivo: destaca por nitidez, materialidad, escala y estabilidad (no hace morph ni deriva), con un azul hielo-plata poco saturado.
+- **Cinco Aperturas** (Cardinal, Órbita, Disolvente, Eje, Prisma): la misma materia en cinco configuraciones; AHORA es el Prisma. Explorando, un único morph lento a la vez.
+- **Tiempo y ejecución separados**: completado, parcial, omitido y sin registrar salen solo del estado guardado (núcleo de cada forma). Un bloque pasado sin registro nunca se muestra como hecho.
+- **Revelado progresivo** en seis oleadas (0–2 s Merkaba, Hermana · 2–3,5 s Escritura, Breathwork, Substack · 3,5–5 s Inglés, Pausa, Lectura · 5–7 s Páginas Web, Velocity, Alimentación · 7–9 s Marca Wellness, Gimnasio, Comida / ducha · 9–11 s Marca Wellness, Cierre digital, Breathwork relajante, Dormir). Cada actividad: forma → Astral Fade → nombre → horario. **Cada nombre se lee ~1,5–2 s** y se disuelve en su sitio; las oleadas se solapan, así nunca están las 18 etiquetas a la vez. Después solo queda **AHORA / nombre / horario**, permanente.
+- **Pista**: con el campo limpio aparece, muy discreto, `TOCA PARA EXPLORAR · ARRASTRA PARA RECORRER`. Se va con la primera interacción y no vuelve ese día (`dayscapeHintDate`).
+- **Arrastrar** recorre el día con parallax: primer plano 100 %, medio 52 %, fondo 20 %, atmósfera 2–10 % (cada masa con su propio factor). Límites suaves e inercia.
+- **Tocar** una actividad la trae al frente (tamaño de primer plano, nítida, recupera algo de materia) y la información se materializa a su alrededor —nombre y horario encima; ✦, tipo y estado debajo— sobre una neblina refractiva, **sin tarjeta**. El resto se aparta y baja, sin oscurecer; una masa de luz se acerca, muy despacio, a lo inspeccionado. Sus vecinas en el tiempo quedan menos atenuadas (preparado para deslizar a la anterior / siguiente más adelante). Tocar fuera o Esc lo devuelve todo a su sitio.
+- **Símbolos delicados, dianas generosas**: cada actividad tiene un área de toque invisible de 44–52 px (gana la más cercana) y un botón accesible para teclado y lector de pantalla.
+- **Atmósfera viva**: suelo perla con masas de luz independientes (perla, silver mist, hielo, violeta y un velo de niebla delante del fondo) y un reflejo especular. Cada masa vive su propia vida de 9–24 s —aparece, deriva, se expande, pierde definición, desaparece y renace en otro sitio—, visible en pocos segundos y nunca sincronizada.
+- **Salida (≈ 6,6 s tras CONTINUAR)**: calma (0,6 s) → **FORMAS → FRAGMENTOS** (cada forma se abre en sus piezas, que se separan, giran y se erosionan a su manera; lo lejano primero) → **CAMPO DE PARTÍCULAS** (microfragmentos que se asientan en puntos perlados, con reflejos plata y profundidad por plano) → AHORA, el último en romperse (2,8 s) → **CONVERGENCIA** (3,7 s: cuatro puntos completan el módulo 3 × 3, una parte la absorbe el presente, el resto se disuelve) → el módulo aterriza en el AHORA de HOY mientras HOY emerge de la misma atmósfera.
+- **Movimiento reducido**: sin deriva, morph ni partículas; revelado y nombres solo con opacidad; la inspección no mueve la actividad (la información aparece a su alrededor, en su sitio); arrastrar sigue funcionando, sin inercia; la atmósfera solo cambia de opacidad en su sitio; salida por fundidos.
+- Código: `src/features/dayscape/` — `model.ts` (modelo y oleadas), `choreography.ts` (tiempos), `layout.ts` (composición D, nombres, inspección, dianas), `forms.ts` (las cinco formas), `morph.ts`, `matter.ts` (fragmentos → partículas → convergencia), `atmosphere.ts` (vidas de las masas de luz), `Aperture.tsx`, `MassField.tsx`, `MatterCanvas.tsx`, `DayscapeAtmosphere.tsx`, `Dayscape.tsx`.
 
 ## Arquitectura
 
@@ -81,7 +75,7 @@ src/
     focus/         flujo HOY → FOCUS → RESULTADO → SIGUIENTE → HOY
     closing/       pregunta de resultado (Sí / Parcial / No), compartida por HOY y FOCUS
     entry/         entrada diaria y micro entrada, reglas de sesión, mensaje del día
-    dayfield/      DAY FIELD: modelo, composición y dibujo del día alrededor del presente
+    dayscape/      DAYSCAPE: el día entero alrededor del presente, su atmósfera y su materia
   layout/          navegación lateral (desktop) y secciones
 ```
 

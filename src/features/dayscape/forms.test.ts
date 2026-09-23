@@ -4,11 +4,9 @@ import {
   FRAGMENTS,
   MORPH_CHAIN,
   SHAPES,
-  assignForms,
   between,
   burst,
   lengthOf,
-  morphPlan,
   nextForm,
   pointAt,
   type FormId,
@@ -70,47 +68,5 @@ describe('Polymorphic forms', () => {
     expect(angle(pointAt(spun, 0.5)) - angle(pointAt(f, 0.5))).toBeGreaterThan(30)
     expect(Math.hypot(...pointAt(pushed, 0.5))).toBeGreaterThan(Math.hypot(...pointAt(SHAPES.cardinal[0], 0.5)) + 0.3)
     expect(burst(f, 'axis', 0)).toBe(f)
-  })
-})
-
-describe('Distribution', () => {
-  const ids = ['merkaba', 'escritura', 'breathwork', 'substack', 'ingles', 'lectura', 'paginas', 'velocity', 'w1', 'gym', 'w2', 'cierre']
-
-  it('all five coexist, neighbours differ, the present starts as Cardinal', () => {
-    const forms = assignForms(ids, 'paginas')
-    expect(new Set(forms.values()).size).toBe(5)
-    expect(forms.get('paginas')).toBe('cardinal')
-    const others = ids.filter((id) => id !== 'paginas').map((id) => forms.get(id))
-    for (let i = 1; i < others.length; i++) expect(others[i]).not.toBe(others[i - 1])
-  })
-})
-
-describe('Choreography', () => {
-  const plan = morphPlan(15, false)
-
-  it('the present visits the five configurations and ends Dissolving before the field settles', () => {
-    const own = plan.filter((e) => e.target === 'current')
-    expect(own).toHaveLength(4)
-    const last = own[own.length - 1]
-    expect(last.at + last.duration).toBeLessThanOrEqual(15.5)
-    let f: FormId = 'cardinal'
-    for (let i = 0; i < own.length; i++) f = nextForm(f)
-    expect(f).toBe('dissolving')
-  })
-
-  it('never more than two secondary morphs start in any 3-second window, none in the first 3 s', () => {
-    const secondary = plan.filter((e) => e.target !== 'current')
-    expect(secondary.every((e) => e.at >= 3)).toBe(true)
-    for (let w = 0; w < 15; w += 3) expect(secondary.filter((e) => e.at >= w && e.at < w + 3).length).toBeLessThanOrEqual(2)
-  })
-
-  it('morphs are slow (1.5–2.5 s) and quiet down after 12 s', () => {
-    expect(plan.every((e) => e.duration >= 1.5 && e.duration <= 2.5)).toBe(true)
-    expect(plan.filter((e) => e.target !== 'current' && e.at >= 12)).toHaveLength(1)
-  })
-
-  it('held for review, the field keeps changing', () => {
-    expect(morphPlan(60, true).filter((e) => e.at > 16).length).toBeGreaterThan(10)
-    expect(morphPlan(60, false).filter((e) => e.at > 16)).toHaveLength(0)
   })
 })

@@ -49,7 +49,7 @@ export interface RoutineBlock {
   defaultObjective?: string
   /**
    * Optional override for how DAY FIELD draws the block. Normally derived
-   * from `kind` and duration (see features/dayfield/model.ts).
+   * from `kind` and duration (see features/dayscape/model.ts).
    */
   visualRole?: 'micro' | 'medium' | 'major' | 'space'
 }

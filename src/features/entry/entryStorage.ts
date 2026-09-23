@@ -10,6 +10,8 @@ export interface EntryMemory {
   dailyMessage?: { date: string; id: string }
   /** Last moment the app was in use, real time (ms). */
   lastActiveAt?: number
+  /** Local date on which DAYSCAPE was first touched: its hint does not return that day. */
+  dayscapeHintDate?: string
 }
 
 export function loadEntryMemory(): EntryMemory {

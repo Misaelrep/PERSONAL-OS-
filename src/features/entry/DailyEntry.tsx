@@ -1,69 +1,56 @@
-import { AnimatePresence, m } from 'framer-motion'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { ambientPoints } from '../../atmosphere/Particles'
+import { AnimatePresence, m, useMotionValue } from 'framer-motion'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Label } from '../../components/ui/Label'
 import type { DailyMessage } from '../../data/dailyMessages'
-import { minutesOfDay } from '../../domain/time'
+import { dateKey, minutesOfDay } from '../../domain/time'
 import { useMotion } from '../../motion/MotionLevel'
 import { EASE } from '../../motion/tokens'
 import { useDay } from '../../state/DayProvider'
-import { DayField, FIELD_STAGES, type FieldStage } from '../dayfield/DayField'
-import { buildDayField } from '../dayfield/model'
+import { CONTINUE_AT, FORM_S, HINT, cleanAt } from '../dayscape/choreography'
+import { DAYSCAPE_STAGES, Dayscape, type DayscapeStage } from '../dayscape/Dayscape'
+import { DayscapeAtmosphere } from '../dayscape/DayscapeAtmosphere'
+import { buildDayscape } from '../dayscape/model'
 import { readFieldMode } from './entryPolicy'
+import { loadEntryMemory, saveEntryMemory } from './entryStorage'
 
 /**
  * DAILY ENTRY — the first real open of the day.
  *
- * ATMÓSFERA VIVA → MENSAJE → EL MENSAJE SE DISUELVE → DAY FIELD (≥ 15 s, alive
- * and inspectable) → ESTABILIZACIÓN → LAS FORMAS SE DESMATERIALIZAN →
- * PARTÍCULAS → CONVERGEN EN AHORA → HOY SE MATERIALIZA. No buttons besides a
- * quiet CONTINUAR late in the field.
+ * MENSAJE → EL MENSAJE SE DISUELVE → DAYSCAPE (el día entero se forma por
+ * oleadas; explorar sin límite) → CONTINUAR → FORMAS → FRAGMENTOS → CAMPO DE
+ * PARTÍCULAS → CONVERGENCIA EN AHORA → HOY emerge de la misma atmósfera.
  */
-export type EntryStage = 'atmosphere' | 'message' | 'dissolve' | FieldStage
+export type EntryStage = 'atmosphere' | 'message' | 'dissolve' | DayscapeStage
 
-const SEQUENCE: EntryStage[] = ['atmosphere', 'message', 'dissolve', ...FIELD_STAGES]
+const SEQUENCE: EntryStage[] = ['atmosphere', 'message', 'dissolve', ...DAYSCAPE_STAGES]
 
-export const isFieldStage = (stage: EntryStage): stage is FieldStage => (FIELD_STAGES as EntryStage[]).includes(stage)
+export const isFieldStage = (stage: EntryStage): stage is DayscapeStage => (DAYSCAPE_STAGES as EntryStage[]).includes(stage)
 
-/** Time each stage lasts (ms). `message` depends on the text. */
-const STAGE_MS: Record<Exclude<EntryStage, 'message'>, number> = {
+/** Time each stage lasts (ms). `message` and `reveal` depend on the content; `explore` has no end. */
+type Timed = Exclude<EntryStage, 'message' | 'reveal' | 'explore'>
+const STAGE_MS: Record<Timed, number> = {
   atmosphere: 1300,
   dissolve: 500,
-  organize: 2000,
-  field: 2000,
-  present: 2000,
-  explore: 9000,
-  settle: 1500,
-  dematerialize: 2000,
-  particles: 1500,
-  gather: 1500,
-  handoff: 1000,
+  settle: 600,
+  dematerialize: 2200,
+  gather: 2200,
+  handoff: 1600,
 }
 
-/** Reduced motion: static variety, crossfades. Zero-length stages are skipped. */
+/** Reduced motion: crossfades only. */
 const REDUCED_MS: typeof STAGE_MS = {
   atmosphere: 900,
   dissolve: 450,
-  organize: 0,
-  field: 1500,
-  present: 1500,
-  explore: 9000,
   settle: 500,
   dematerialize: 900,
-  particles: 0,
   gather: 800,
   handoff: 800,
 }
 
-/** ?field=collapse: straight to the exit, at normal speed. */
-const COLLAPSE_EXPLORE_MS = 1200
+/** ?field=collapse: a short message, the day formed at once, straight to the exit at normal speed. */
 const COLLAPSE_READING_MS = 1500
-
-/** CONTINUAR appears, quietly, this long after the field began (ms). */
-const CONTINUE_AT_MS = 12000
-
-/** After an inspection closes, the field waits this long before it leaves (ms). */
-const AFTER_INSPECTION_MS = 2000
+const COLLAPSE_REVEAL_SCALE = 0.2
+const COLLAPSE_EXPLORE_MS = 1200
 
 /** How long the message dissolves, overlapping the field's first moments (ms). */
 const DISSOLVE_MS = 900
@@ -85,102 +72,103 @@ interface DailyEntryProps {
 
 export function DailyEntry({ message, onStage, onHandoff, onDone }: DailyEntryProps) {
   const { view, now } = useDay()
-  const { level, particles } = useMotion()
+  const { level } = useMotion()
   const reduced = level === 'reducido'
   const [mode] = useState(() => readFieldMode(window.location.search))
   const speed = mode.fast ? 0.35 : 1
+  const revealScale = mode.collapse ? COLLAPSE_REVEAL_SCALE : 1
   const [stage, setStage] = useState<EntryStage>('atmosphere')
 
-  // The field is a snapshot of the day at the moment the entry began.
-  const [model] = useState(() => buildDayField(view, minutesOfDay(now)))
-  const [ambient] = useState(() =>
-    reduced || !particles
-      ? []
-      : ambientPoints(window.matchMedia('(max-width: 640px)').matches).map(([x, y]) => ({
-          x: (x / 100) * window.innerWidth,
-          y: (y / 100) * window.innerHeight,
-        })),
+  // The day is a snapshot of the moment the entry began.
+  const [model] = useState(() => buildDayscape(view, minutesOfDay(now)))
+  const today = useMemo(() => dateKey(now), [now])
+  const [hintSeen] = useState(() => loadEntryMemory().dayscapeHintDate === today)
+  const clean = useMemo(() => cleanAt(model.activities), [model])
+  const revealMs = useMemo(
+    () =>
+      mode.collapse
+        ? (Math.max(...model.activities.map((a) => a.revealAt)) * revealScale + FORM_S + 0.4) * 1000
+        : (clean + 0.25) * 1000,
+    [mode.collapse, model, revealScale, clean],
   )
 
+  // Shared by the field and the atmosphere behind it.
+  const panX = useMotionValue(0)
+  const panY = useMotionValue(0)
+  const pan = useMemo(() => ({ x: panX, y: panY }), [panX, panY])
+  const atmosphere = useMotionValue(1)
+
   const timer = useRef(0)
-  const continueTimer = useRef(0)
-  const exitTimer = useRef(0)
+  const timers = useRef<number[]>([])
   const callbacks = useRef({ onStage, onHandoff, onDone })
   callbacks.current = { onStage, onHandoff, onDone }
   const [showContinue, setShowContinue] = useState(false)
-  const inspecting = useRef(false)
-  const exitPending = useRef(false)
+  const [hint, setHint] = useState(false)
+  const touched = useRef(hintSeen)
 
   const durationOf = useCallback(
-    (s: EntryStage) => {
+    (s: EntryStage): number | null => {
       if (s === 'message') return (mode.collapse ? COLLAPSE_READING_MS : readingMs(message)) * speed
-      if (s === 'explore' && mode.collapse) return COLLAPSE_EXPLORE_MS * speed
+      if (s === 'reveal') return revealMs * speed
+      if (s === 'explore') return mode.collapse && !mode.hold ? COLLAPSE_EXPLORE_MS * speed : null
       return (reduced ? REDUCED_MS : STAGE_MS)[s] * speed
     },
-    [message, reduced, speed, mode.collapse],
+    [message, reduced, speed, mode.collapse, mode.hold, revealMs],
   )
 
   const go = useCallback(
-    (target: EntryStage) => {
+    (next: EntryStage) => {
       window.clearTimeout(timer.current)
-      window.clearTimeout(exitTimer.current)
-      let next = target
-      while (next !== 'handoff' && durationOf(next) === 0) next = SEQUENCE[SEQUENCE.indexOf(next) + 1]
       setStage(next)
       callbacks.current.onStage(next)
-      if ((next === 'organize' || next === 'field') && !continueTimer.current)
-        continueTimer.current = window.setTimeout(() => setShowContinue(true), CONTINUE_AT_MS * speed)
-      if (next === 'handoff') callbacks.current.onHandoff()
-      const after = SEQUENCE[SEQUENCE.indexOf(next) + 1]
-      if (next === 'explore') {
-        // ?field=hold keeps the field alive; otherwise it leaves on its own,
-        // but never while something is being inspected.
-        if (mode.hold) return
-        timer.current = window.setTimeout(() => {
-          if (inspecting.current) exitPending.current = true
-          else go('settle')
-        }, durationOf(next))
-        return
+      if (next === 'reveal') {
+        // CONTINUAR, quietly, from ~14 s; the hint once the field is clean.
+        const later = (ms: number, fn: () => void) => timers.current.push(window.setTimeout(fn, ms))
+        later((mode.collapse ? revealMs / 1000 : CONTINUE_AT) * 1000 * speed, () => setShowContinue(true))
+        if (!touched.current && !mode.collapse) {
+          later((clean + HINT.after) * 1000 * speed, () => !touched.current && setHint(true))
+          later((clean + HINT.after + HINT.stay) * 1000 * speed, () => setHint(false))
+        }
       }
-      timer.current = window.setTimeout(() => (after ? go(after) : callbacks.current.onDone()), durationOf(next))
+      if (next === 'handoff') callbacks.current.onHandoff()
+      const ms = durationOf(next)
+      // Exploring has no end of its own: only CONTINUAR leaves.
+      if (ms === null) return
+      const after = SEQUENCE[SEQUENCE.indexOf(next) + 1]
+      timer.current = window.setTimeout(() => (after ? go(after) : callbacks.current.onDone()), ms)
     },
-    [durationOf, mode.hold, speed],
+    [durationOf, speed, mode.collapse, revealMs, clean],
   )
 
   // Starts once; later changes (e.g. the motion level) don't restart the ritual.
   const start = useRef(go)
   useEffect(() => {
     start.current('atmosphere')
+    const pending = timers.current
     return () => {
       window.clearTimeout(timer.current)
-      window.clearTimeout(continueTimer.current)
-      window.clearTimeout(exitTimer.current)
+      pending.forEach((t) => window.clearTimeout(t))
     }
   }, [])
 
-  const onInspect = useCallback(
-    (open: boolean) => {
-      inspecting.current = open
-      window.clearTimeout(exitTimer.current)
-      if (!open && exitPending.current) {
-        exitPending.current = false
-        exitTimer.current = window.setTimeout(() => {
-          if (inspecting.current) exitPending.current = true
-          else go('settle')
-        }, AFTER_INSPECTION_MS * speed)
-      }
-    },
-    [go, speed],
-  )
+  const stageRef = useRef(stage)
+  stageRef.current = stage
   const onContinue = useCallback(() => {
-    inspecting.current = false
-    exitPending.current = false
+    if (stageRef.current !== 'explore' && stageRef.current !== 'reveal') return
+    setHint(false)
+    setShowContinue(false)
     go('settle')
   }, [go])
 
-  // A tap during the message moves the ritual along; in the field, taps inspect.
-  const stageRef = useRef(stage)
-  stageRef.current = stage
+  // The first touch of the field retires the hint for the rest of the day.
+  const onInteract = useCallback(() => {
+    setHint(false)
+    if (touched.current) return
+    touched.current = true
+    saveEntryMemory({ dayscapeHintDate: today })
+  }, [today])
+
+  // A tap during the message moves the ritual along; in the field, taps explore.
   const advance = useCallback(() => {
     const s = stageRef.current
     if (s === 'atmosphere' || s === 'message') go('dissolve')
@@ -200,25 +188,39 @@ export function DailyEntry({ message, onStage, onHandoff, onDone }: DailyEntryPr
 
   const weekday = now.toLocaleDateString('es', { weekday: 'long' })
   const date = now.toLocaleDateString('es', { day: 'numeric', month: 'long' })
-  const showMessage = stage === 'message' || stage === 'dissolve' || stage === 'organize'
+  const showMessage = stage === 'message' || stage === 'dissolve' || stage === 'reveal'
   const dissolving = stage !== 'message'
+  const exploring = stage === 'explore' || stage === 'reveal'
+  // The atmosphere comes alive behind the last instants of the message and lets HOY emerge from it.
+  const atmosphereShown = stage !== 'atmosphere' && stage !== 'handoff'
+  const atmosphereDelay = stage === 'message' ? Math.max(0, (durationOf('message')! - 1400) / 1000) : 0
 
   return (
     <m.div
       role="dialog"
       aria-label="Entrada del día"
       data-stage={stage}
-      className="tone-ink fixed inset-0 z-30 grid place-items-center px-6 pt-[env(safe-area-inset-top)] pb-[max(env(safe-area-inset-bottom),24px)]"
+      className="dayscape tone-ink fixed inset-0 z-30 grid place-items-center px-6 pt-[env(safe-area-inset-top)] pb-[max(env(safe-area-inset-bottom),24px)]"
       initial={{ opacity: 1 }}
       exit={{ opacity: 0, transition: { duration: 0.4 } }}
       onClick={advance}
     >
+      <DayscapeAtmosphere
+        shown={atmosphereShown}
+        reduced={reduced}
+        pan={pan}
+        presence={atmosphere}
+        fadeIn={1.6 * speed}
+        fadeOut={1.5 * speed}
+        delay={atmosphereDelay}
+      />
+
       <AnimatePresence>
         {showMessage && (
           <m.div
             key="message"
             aria-live="polite"
-            className="w-full max-w-[34rem] text-center"
+            className="relative w-full max-w-[34rem] text-center"
             initial={{ opacity: 0 }}
             animate={
               dissolving
@@ -251,29 +253,49 @@ export function DailyEntry({ message, onStage, onHandoff, onDone }: DailyEntryPr
       </AnimatePresence>
 
       {isFieldStage(stage) && (
-        <DayField
+        <Dayscape
           model={model}
           stage={stage}
           speed={speed}
+          revealScale={revealScale}
+          names={!mode.collapse}
           reduced={reduced}
-          ambient={ambient}
+          pan={pan}
+          atmosphere={atmosphere}
           landsOnMatrix={view.current.status === 'activo' || view.current.status === 'en-focus'}
-          hold={mode.hold}
-          onInspect={onInspect}
+          onInteract={onInteract}
         />
       )}
 
-      {/* Late in the field, a quiet way on. It never skips the transition. */}
+      {/* Once the field is clean, a quiet word on how to explore it. Gone at the first touch, for the day. */}
       <AnimatePresence>
-        {showContinue && stage === 'explore' && (
+        {hint && exploring && (
+          <m.p
+            key="hint"
+            aria-hidden
+            className="label-spaced pointer-events-none absolute inset-x-0 z-[80] px-6 text-center text-ink-4"
+            style={{ bottom: 'calc(max(env(safe-area-inset-bottom), 26px) + 56px)', fontSize: 9, letterSpacing: '0.3em', lineHeight: 1.9 }}
+            initial={{ opacity: 0, filter: 'blur(3px)' }}
+            animate={{ opacity: 0.75, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, filter: 'blur(3px)' }}
+            transition={{ duration: 1.1 * speed, ease: EASE }}
+          >
+            <span className="whitespace-nowrap">Toca para explorar ·</span> <span className="whitespace-nowrap">Arrastra para recorrer</span>
+          </m.p>
+        )}
+      </AnimatePresence>
+
+      {/* A quiet way on. It never skips the transition. */}
+      <AnimatePresence>
+        {showContinue && exploring && (
           <m.div
             key="continue"
-            className="pointer-events-none absolute inset-x-0 flex justify-center"
+            className="pointer-events-none absolute inset-x-0 z-[80] flex justify-center"
             style={{ bottom: 'max(env(safe-area-inset-bottom), 26px)' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 1.2, ease: EASE }}
+            transition={{ duration: 1.2 * speed, ease: EASE }}
           >
             <button
               type="button"
