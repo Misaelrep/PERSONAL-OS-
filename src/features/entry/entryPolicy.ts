@@ -39,3 +39,16 @@ export function readEntryOverride(search: string): EntryKind | undefined {
   const v = new URLSearchParams(search).get('entry')
   return v === 'full' || v === 'micro' || v === 'none' ? v : undefined
 }
+
+export interface FieldMode {
+  /** Stop the DAY FIELD once formed, until a tap. */
+  hold: boolean
+  /** Run the whole entry faster. */
+  fast: boolean
+}
+
+/** `?field=hold`, `?field=fast` or both (`?field=fast,hold`): review modes for the DAY FIELD. */
+export function readFieldMode(search: string): FieldMode {
+  const flags = (new URLSearchParams(search).get('field') ?? '').split(',').map((v) => v.trim())
+  return { hold: flags.includes('hold'), fast: flags.includes('fast') }
+}

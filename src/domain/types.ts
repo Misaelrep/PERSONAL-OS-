@@ -47,6 +47,11 @@ export interface RoutineBlock {
   energy: EnergyState
   /** Default "¿Qué tiene que existir al terminar este bloque?" answer. Editable in HOY. */
   defaultObjective?: string
+  /**
+   * Optional override for how DAY FIELD draws the block. Normally derived
+   * from `kind` and duration (see features/dayfield/model.ts).
+   */
+  visualRole?: 'micro' | 'medium' | 'major' | 'space'
 }
 
 /**

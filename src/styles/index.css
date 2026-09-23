@@ -736,3 +736,23 @@
     animation: none !important;
   }
 }
+
+/* ---------------------------------------------------------------------- */
+/* DAY FIELD — the day around the present (daily entry)                    */
+/* ---------------------------------------------------------------------- */
+
+.day-field {
+  /* past: silver that dissolves · future: ice blue still forming · now: the accent */
+  --df-past: #6f7c90;
+  --df-future: #7fa3d6;
+  --df-now: var(--accent);
+  --df-path: #8a97ab;
+  --df-space: #b9d0f2;
+}
+
+:root[data-tone='deep'] .day-field {
+  --df-past: rgba(214, 226, 246, 0.8);
+  --df-future: rgba(160, 196, 255, 0.95);
+  --df-path: rgba(214, 226, 246, 0.7);
+  --df-space: rgba(120, 165, 245, 0.9);
+}

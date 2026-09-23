@@ -31,12 +31,16 @@ export function NowCard({ onStartFocus, focusing = false }: NowCardProps) {
       <div className="now-glow" aria-hidden />
       <div className="relative flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 text-ink-3">
-          {block.status === 'activo' || block.status === 'en-focus' ? (
-            <ActiveMatrix gathering={focusing} />
-          ) : (
-            <StatusGlyph status={block.status} />
-          )}
-          <Label className="text-ink-2">Ahora</Label>
+          <span data-now-matrix className="flex shrink-0">
+            {block.status === 'activo' || block.status === 'en-focus' ? (
+              <ActiveMatrix gathering={focusing} />
+            ) : (
+              <StatusGlyph status={block.status} />
+            )}
+          </span>
+          <span data-now-label className="flex">
+            <Label className="text-ink-2">Ahora</Label>
+          </span>
         </div>
         <span className="tabular text-[14px] text-ink-2 sm:text-[15px]">
           {block.kind === 'sleep' ? `hasta ${formatClock(block.endMin)}` : formatRange(block.startMin, block.endMin)}

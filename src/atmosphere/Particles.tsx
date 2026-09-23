@@ -7,9 +7,10 @@ import { EASE } from '../motion/tokens'
 /**
  * DISPERSIÓN → AGRUPACIÓN → CONCENTRACIÓN → LIBERACIÓN.
  * A handful of slow points: peripheral in HOY, drawn toward the center in
- * Focus, released outward when Focus ends.
+ * Focus, released outward when Focus ends. `handed-off` hands them to the
+ * DAY FIELD, which redraws them as the day's first nodes.
  */
-export type ParticleMode = 'dispersed' | 'gathering' | 'converged' | 'released'
+export type ParticleMode = 'dispersed' | 'gathering' | 'converged' | 'released' | 'handed-off'
 
 interface Particle {
   /** Peripheral resting place (vw / vh). */
@@ -61,10 +62,23 @@ function makeParticles(count: number): Particle[] {
   return list
 }
 
+const COMPACT = 9
+const WIDE = 16
+
+/**
+ * Resting places (vw / vh) of the points visible in HOY's light scene, which
+ * shows every other particle.
+ */
+export function ambientPoints(compact: boolean): [number, number][] {
+  return makeParticles(compact ? COMPACT : WIDE)
+    .filter((_, i) => i % 2 === 0)
+    .map((p) => p.home)
+}
+
 export function Particles({ mode }: { mode: ParticleMode }) {
   const { particles: enabled, ambient } = useMotion()
   const compact = useMediaQuery('(max-width: 640px)')
-  const list = useMemo(() => makeParticles(compact ? 9 : 16), [compact])
+  const list = useMemo(() => makeParticles(compact ? COMPACT : WIDE), [compact])
 
   if (!enabled) return null
 
@@ -80,13 +94,22 @@ export function Particles({ mode }: { mode: ParticleMode }) {
                 ? [(p.home[0] + p.focus[0]) / 2, (p.home[1] + p.focus[1]) / 2]
                 : p.home
         const duration =
-          mode === 'converged' ? 2.4 + (i % 5) * 0.25 : mode === 'released' ? 2.2 : mode === 'gathering' ? 1.2 : 6
+          mode === 'converged'
+            ? 2.4 + (i % 5) * 0.25
+            : mode === 'released'
+              ? 2.2
+              : mode === 'gathering'
+                ? 1.2
+                : mode === 'handed-off'
+                  ? 0.45
+                  : 6
+        const opacity = mode === 'handed-off' ? 0 : mode === 'converged' ? Math.min(1, p.opacity + 0.3) : p.opacity
         return (
           <m.span
             key={i}
             className="particle"
             initial={false}
-            animate={{ x: `${x}vw`, y: `${y}vh`, opacity: mode === 'converged' ? Math.min(1, p.opacity + 0.3) : p.opacity }}
+            animate={{ x: `${x}vw`, y: `${y}vh`, opacity }}
             transition={{ duration, ease: EASE, delay: mode === 'converged' ? (i % 7) * 0.06 : 0 }}
           >
             <span

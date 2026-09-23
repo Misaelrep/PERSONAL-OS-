@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { DailyMessage } from '../../data/dailyMessages'
 import { dayOfYear, messageForDate } from './dailyMessage'
-import { decideEntry, MICRO_ENTRY_AFTER_MS, readEntryOverride } from './entryPolicy'
+import { decideEntry, MICRO_ENTRY_AFTER_MS, readEntryOverride, readFieldMode } from './entryPolicy'
 
 const NOW = new Date(2026, 8, 22, 10, 14).getTime()
 const MIN = 60_000
@@ -69,5 +69,14 @@ describe('daily message', () => {
     expect(messageForDate(new Date(2026, 8, 22), library, recorded).id).toBe('m3')
     // A record from another day is ignored.
     expect(messageForDate(new Date(2026, 8, 23), library, recorded).id).toBe(library[266 % 30].id)
+  })
+})
+
+describe('readFieldMode', () => {
+  it('reads hold, fast or both; nothing by default', () => {
+    expect(readFieldMode('')).toEqual({ hold: false, fast: false })
+    expect(readFieldMode('?entry=full&field=hold')).toEqual({ hold: true, fast: false })
+    expect(readFieldMode('?field=fast')).toEqual({ hold: false, fast: true })
+    expect(readFieldMode('?field=fast,hold')).toEqual({ hold: true, fast: true })
   })
 })
