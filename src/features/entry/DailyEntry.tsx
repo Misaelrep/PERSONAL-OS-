@@ -14,9 +14,10 @@ import { readFieldMode } from './entryPolicy'
 /**
  * DAILY ENTRY — the first real open of the day.
  *
- * ATMÓSFERA VIVA → MENSAJE → EL MENSAJE SE DISUELVE → DAY FIELD EMERGE →
- * PRESENTE EN FOCO → QUIETUD → COLAPSO → SOLO EL NODO ACTUAL → AHORA →
- * HOY SE MATERIALIZA. Automatic: no buttons. A tap only moves it along.
+ * ATMÓSFERA VIVA → MENSAJE → EL MENSAJE SE DISUELVE → DAY FIELD (≥ 15 s, alive
+ * and inspectable) → ESTABILIZACIÓN → LAS FORMAS SE DESMATERIALIZAN →
+ * PARTÍCULAS → CONVERGEN EN AHORA → HOY SE MATERIALIZA. No buttons besides a
+ * quiet CONTINUAR late in the field.
  */
 export type EntryStage = 'atmosphere' | 'message' | 'dissolve' | FieldStage
 
@@ -28,30 +29,41 @@ export const isFieldStage = (stage: EntryStage): stage is FieldStage => (FIELD_S
 const STAGE_MS: Record<Exclude<EntryStage, 'message'>, number> = {
   atmosphere: 1300,
   dissolve: 500,
-  organize: 800,
-  field: 800,
-  present: 800,
-  still: 900,
-  collapse: 900,
-  node: 450,
+  organize: 2000,
+  field: 2000,
+  present: 2000,
+  explore: 9000,
+  settle: 1500,
+  dematerialize: 2000,
+  particles: 1500,
+  gather: 1500,
   handoff: 1000,
 }
 
-/** Reduced motion: crossfades only, and quicker. Zero-length stages are skipped. */
+/** Reduced motion: static variety, crossfades. Zero-length stages are skipped. */
 const REDUCED_MS: typeof STAGE_MS = {
   atmosphere: 900,
   dissolve: 450,
   organize: 0,
-  field: 800,
-  present: 800,
-  still: 900,
-  collapse: 0,
-  node: 0,
-  handoff: 700,
+  field: 1500,
+  present: 1500,
+  explore: 9000,
+  settle: 500,
+  dematerialize: 900,
+  particles: 0,
+  gather: 800,
+  handoff: 800,
 }
 
-/** A tap while the field is forming only counts after this long (ms). */
-const MIN_FORMING_MS = 500
+/** ?field=collapse: straight to the exit, at normal speed. */
+const COLLAPSE_EXPLORE_MS = 1200
+const COLLAPSE_READING_MS = 1500
+
+/** CONTINUAR appears, quietly, this long after the field began (ms). */
+const CONTINUE_AT_MS = 12000
+
+/** After an inspection closes, the field waits this long before it leaves (ms). */
+const AFTER_INSPECTION_MS = 2000
 
 /** How long the message dissolves, overlapping the field's first moments (ms). */
 const DISSOLVE_MS = 900
@@ -91,54 +103,94 @@ export function DailyEntry({ message, onStage, onHandoff, onDone }: DailyEntryPr
   )
 
   const timer = useRef(0)
-  const formingSince = useRef(0)
+  const continueTimer = useRef(0)
+  const exitTimer = useRef(0)
   const callbacks = useRef({ onStage, onHandoff, onDone })
   callbacks.current = { onStage, onHandoff, onDone }
+  const [showContinue, setShowContinue] = useState(false)
+  const inspecting = useRef(false)
+  const exitPending = useRef(false)
 
   const durationOf = useCallback(
-    (s: EntryStage) => (s === 'message' ? readingMs(message) : (reduced ? REDUCED_MS : STAGE_MS)[s]) * speed,
-    [message, reduced, speed],
+    (s: EntryStage) => {
+      if (s === 'message') return (mode.collapse ? COLLAPSE_READING_MS : readingMs(message)) * speed
+      if (s === 'explore' && mode.collapse) return COLLAPSE_EXPLORE_MS * speed
+      return (reduced ? REDUCED_MS : STAGE_MS)[s] * speed
+    },
+    [message, reduced, speed, mode.collapse],
   )
 
   const go = useCallback(
     (target: EntryStage) => {
       window.clearTimeout(timer.current)
+      window.clearTimeout(exitTimer.current)
       let next = target
       while (next !== 'handoff' && durationOf(next) === 0) next = SEQUENCE[SEQUENCE.indexOf(next) + 1]
       setStage(next)
       callbacks.current.onStage(next)
-      if ((next === 'organize' || next === 'field') && !formingSince.current) formingSince.current = performance.now()
+      if ((next === 'organize' || next === 'field') && !continueTimer.current)
+        continueTimer.current = window.setTimeout(() => setShowContinue(true), CONTINUE_AT_MS * speed)
       if (next === 'handoff') callbacks.current.onHandoff()
-      // ?field=hold stops while the field can be read; a tap continues.
-      if (next === 'still' && mode.hold) return
       const after = SEQUENCE[SEQUENCE.indexOf(next) + 1]
+      if (next === 'explore') {
+        // ?field=hold keeps the field alive; otherwise it leaves on its own,
+        // but never while something is being inspected.
+        if (mode.hold) return
+        timer.current = window.setTimeout(() => {
+          if (inspecting.current) exitPending.current = true
+          else go('settle')
+        }, durationOf(next))
+        return
+      }
       timer.current = window.setTimeout(() => (after ? go(after) : callbacks.current.onDone()), durationOf(next))
     },
-    [durationOf, mode.hold],
+    [durationOf, mode.hold, speed],
   )
 
   // Starts once; later changes (e.g. the motion level) don't restart the ritual.
   const start = useRef(go)
   useEffect(() => {
     start.current('atmosphere')
-    return () => window.clearTimeout(timer.current)
+    return () => {
+      window.clearTimeout(timer.current)
+      window.clearTimeout(continueTimer.current)
+      window.clearTimeout(exitTimer.current)
+    }
   }, [])
 
-  // A tap moves the ritual along; it never skips it.
+  const onInspect = useCallback(
+    (open: boolean) => {
+      inspecting.current = open
+      window.clearTimeout(exitTimer.current)
+      if (!open && exitPending.current) {
+        exitPending.current = false
+        exitTimer.current = window.setTimeout(() => {
+          if (inspecting.current) exitPending.current = true
+          else go('settle')
+        }, AFTER_INSPECTION_MS * speed)
+      }
+    },
+    [go, speed],
+  )
+  const onContinue = useCallback(() => {
+    inspecting.current = false
+    exitPending.current = false
+    go('settle')
+  }, [go])
+
+  // A tap during the message moves the ritual along; in the field, taps inspect.
   const stageRef = useRef(stage)
   stageRef.current = stage
   const advance = useCallback(() => {
     const s = stageRef.current
     if (s === 'atmosphere' || s === 'message') go('dissolve')
-    else if (s === 'organize' || s === 'field') {
-      // Still forming: complete it and show the present.
-      if (performance.now() - formingSince.current >= MIN_FORMING_MS * speed) go('present')
-    } else if (s === 'present' || s === 'still') go('collapse')
-  }, [go, speed])
+  }, [go])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Enter' && e.key !== ' ') return
+      const s = stageRef.current
+      if (s !== 'atmosphere' && s !== 'message') return
       e.preventDefault()
       advance()
     }
@@ -206,8 +258,37 @@ export function DailyEntry({ message, onStage, onHandoff, onDone }: DailyEntryPr
           reduced={reduced}
           ambient={ambient}
           landsOnMatrix={view.current.status === 'activo' || view.current.status === 'en-focus'}
+          hold={mode.hold}
+          onInspect={onInspect}
         />
       )}
+
+      {/* Late in the field, a quiet way on. It never skips the transition. */}
+      <AnimatePresence>
+        {showContinue && stage === 'explore' && (
+          <m.div
+            key="continue"
+            className="pointer-events-none absolute inset-x-0 flex justify-center"
+            style={{ bottom: 'max(env(safe-area-inset-bottom), 26px)' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.2, ease: EASE }}
+          >
+            <button
+              type="button"
+              className="label-spaced pointer-events-auto px-4 py-3 text-ink-3 opacity-70 transition-opacity duration-300 hover:opacity-100"
+              style={{ fontSize: 10 }}
+              onClick={(e) => {
+                e.stopPropagation()
+                onContinue()
+              }}
+            >
+              Continuar <span aria-hidden>→</span>
+            </button>
+          </m.div>
+        )}
+      </AnimatePresence>
     </m.div>
   )
 }

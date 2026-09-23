@@ -73,10 +73,11 @@ describe('daily message', () => {
 })
 
 describe('readFieldMode', () => {
-  it('reads hold, fast or both; nothing by default', () => {
-    expect(readFieldMode('')).toEqual({ hold: false, fast: false })
-    expect(readFieldMode('?entry=full&field=hold')).toEqual({ hold: true, fast: false })
-    expect(readFieldMode('?field=fast')).toEqual({ hold: false, fast: true })
-    expect(readFieldMode('?field=fast,hold')).toEqual({ hold: true, fast: true })
+  it('reads hold, fast, collapse or combinations; nothing by default', () => {
+    expect(readFieldMode('')).toEqual({ hold: false, fast: false, collapse: false })
+    expect(readFieldMode('?entry=full&field=hold')).toEqual({ hold: true, fast: false, collapse: false })
+    expect(readFieldMode('?field=fast')).toEqual({ hold: false, fast: true, collapse: false })
+    expect(readFieldMode('?field=fast,hold')).toEqual({ hold: true, fast: true, collapse: false })
+    expect(readFieldMode('?field=collapse')).toEqual({ hold: false, fast: false, collapse: true })
   })
 })

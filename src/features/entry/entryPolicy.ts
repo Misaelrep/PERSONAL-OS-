@@ -41,14 +41,16 @@ export function readEntryOverride(search: string): EntryKind | undefined {
 }
 
 export interface FieldMode {
-  /** Stop the DAY FIELD once formed, until a tap. */
+  /** Keep the DAY FIELD alive and open to inspection; no automatic exit. */
   hold: boolean
   /** Run the whole entry faster. */
   fast: boolean
+  /** Short message and field: go straight to settling, dematerialization, particles and HOY. */
+  collapse: boolean
 }
 
-/** `?field=hold`, `?field=fast` or both (`?field=fast,hold`): review modes for the DAY FIELD. */
+/** `?field=hold`, `fast`, `collapse` (combinable: `?field=fast,hold`): review modes for the DAY FIELD. */
 export function readFieldMode(search: string): FieldMode {
   const flags = (new URLSearchParams(search).get('field') ?? '').split(',').map((v) => v.trim())
-  return { hold: flags.includes('hold'), fast: flags.includes('fast') }
+  return { hold: flags.includes('hold'), fast: flags.includes('fast'), collapse: flags.includes('collapse') }
 }

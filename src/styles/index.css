@@ -738,21 +738,148 @@
 }
 
 /* ---------------------------------------------------------------------- */
-/* DAY FIELD — the day around the present (daily entry)                    */
+/* DAY FIELD — one matter, five configurations (daily entry)                */
 /* ---------------------------------------------------------------------- */
 
 .day-field {
-  /* past: silver that dissolves · future: ice blue still forming · now: the accent */
-  --df-past: #6f7c90;
-  --df-future: #7fa3d6;
-  --df-now: var(--accent);
-  --df-path: #8a97ab;
-  --df-space: #b9d0f2;
+  /* Pearl · silver · desaturated ice. Color lives in light, not in fills. */
+  --df-line-past: #8b97a8;
+  --df-line-future: #93abc6;
+  --df-line-now: #7f98b6;
+  --df-now-core: #9db7d4;
+  --df-facet: #c7d9e9;
+  --df-particle: #8ea6c0;
+  --df-past: #7d899b;
+  --df-future: #8fa9c7;
+  --df-path: #97a3b4;
+  --df-space: #b8cee2;
+  --df-glow-pearl: rgba(255, 255, 255, 0.95);
+  --df-glow-ice: rgba(184, 206, 226, 0.55);
+  --df-glow-ice-solid: #c7d9e9;
+  --df-glow-violet: rgba(204, 196, 238, 0.28);
 }
 
 :root[data-tone='deep'] .day-field {
+  --df-line-past: rgba(214, 226, 246, 0.8);
+  --df-line-future: rgba(190, 214, 245, 0.9);
+  --df-line-now: rgba(226, 236, 252, 0.95);
+  --df-now-core: #c9dbf2;
+  --df-facet: rgba(184, 206, 226, 0.7);
+  --df-particle: #dfe9fb;
   --df-past: rgba(214, 226, 246, 0.8);
-  --df-future: rgba(160, 196, 255, 0.95);
-  --df-path: rgba(214, 226, 246, 0.7);
+  --df-future: rgba(170, 200, 250, 0.9);
+  --df-path: rgba(214, 226, 246, 0.6);
   --df-space: rgba(120, 165, 245, 0.9);
+  --df-glow-pearl: rgba(232, 240, 255, 0.2);
+  --df-glow-ice: rgba(150, 185, 235, 0.3);
+  --df-glow-ice-solid: #9fbde6;
+  --df-glow-violet: rgba(170, 150, 240, 0.14);
+}
+
+/* Astral Fade: a few elliptical glows per node, each on its own slow cycle. */
+.df-fade {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.df-blob {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  will-change: transform, opacity;
+}
+
+.df-blob-pearl {
+  background: radial-gradient(closest-side, var(--df-glow-pearl), transparent);
+  animation-name: df-breathe-a;
+}
+
+.df-blob-ice {
+  background: radial-gradient(closest-side, var(--df-glow-ice), transparent);
+  animation-name: df-breathe-b;
+}
+
+/* One glow holding both lights, for the quieter nodes. */
+.df-blob-mixed {
+  background:
+    radial-gradient(closest-side at 42% 44%, var(--df-glow-pearl), transparent),
+    radial-gradient(closest-side at 60% 58%, var(--df-glow-ice), transparent 85%);
+  animation-name: df-breathe-a;
+}
+
+.df-still {
+  animation: none;
+  opacity: 0.8;
+  will-change: auto;
+}
+
+.df-blob-violet {
+  background: radial-gradient(closest-side, var(--df-glow-violet), transparent);
+  animation-name: df-breathe-c;
+}
+
+@keyframes df-breathe-a {
+  0% { transform: translate(-50%, -50%) translate(-3px, 2px) rotate(-8deg) scale(0.86); opacity: 0.55; }
+  50% { transform: translate(-50%, -50%) translate(2px, -3px) rotate(4deg) scale(1.12); opacity: 0.95; }
+  100% { transform: translate(-50%, -50%) translate(4px, 1px) rotate(12deg) scale(0.95); opacity: 0.6; }
+}
+
+@keyframes df-breathe-b {
+  0% { transform: translate(-50%, -50%) translate(4px, -2px) rotate(20deg) scale(0.9); opacity: 0.4; }
+  55% { transform: translate(-50%, -50%) translate(-2px, 3px) rotate(34deg) scale(1.18); opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) translate(-4px, -1px) rotate(26deg) scale(1); opacity: 0.55; }
+}
+
+/* The violet is only a contamination of light: born, gone, back again. */
+@keyframes df-breathe-c {
+  0% { transform: translate(-50%, -50%) translate(0, -4px) rotate(-30deg) scale(0.8); opacity: 0; }
+  45% { transform: translate(-50%, -50%) translate(3px, -2px) rotate(-18deg) scale(1.05); opacity: 0.85; }
+  100% { transform: translate(-50%, -50%) translate(-2px, 2px) rotate(-6deg) scale(1.25); opacity: 0; }
+}
+
+/* A few pixels of drift and scale: the field is alive, never busy. */
+.df-drift {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: df-drift 17s ease-in-out infinite alternate;
+}
+
+@keyframes df-drift {
+  0% { transform: translate(-1.5px, 1px) scale(0.985); }
+  50% { transform: translate(1px, -1.5px) scale(1.015); }
+  100% { transform: translate(2px, 1.2px) scale(1); }
+}
+
+/* Rare micro-reflections. */
+.df-glint {
+  opacity: 0;
+  animation: df-glint 11s ease-in-out infinite;
+}
+
+@keyframes df-glint {
+  0%, 76% { opacity: 0; }
+  84% { opacity: 0.95; }
+  94%, 100% { opacity: 0; }
+}
+
+/* Inspecting a node: the rest steps back, discreetly. */
+.df-dim {
+  transition: opacity 0.6s var(--ease-astral);
+}
+
+.day-field[data-inspecting] .df-dim:not([data-selected]) {
+  opacity: 0.42;
+}
+
+:root[data-motion='reducido'] .df-blob,
+:root[data-motion='reducido'] .df-drift,
+:root[data-motion='reducido'] .df-glint,
+:root[data-motion='sutil'] .df-drift {
+  animation: none;
 }

@@ -34,10 +34,12 @@ export interface PlacedNode {
   /** Arc position on screen, px from the present (negative = behind). */
   sigma: number
   depth: TemporalDepth
-  /** Base radius (px) before depth. */
+  /** Radius of its form (px) before depth. */
   r: number
   /** Gravity: small offset toward the present (px). */
   pull: Pt
+  /** Radius of the tap target (px): generous, but never over a neighbour. */
+  hit: number
 }
 
 export interface Fragment {
@@ -49,9 +51,9 @@ export interface Fragment {
   major: boolean
   /** Belongs to the current block. */
   current: boolean
+  /** Points along it, in order, for its dematerialization. */
+  samples: Pt[]
 }
-
-export type PointFate = 'module' | 'absorb' | 'fade'
 
 export interface MicroPoint {
   id: string
@@ -62,9 +64,6 @@ export interface MicroPoint {
   side: TemporalSide
   f: number
   pull: Pt
-  fate: PointFate
-  /** Module cell the point settles in when it survives the collapse. */
-  cell?: Pt & { r: number; o: number }
 }
 
 export interface SpaceGlow {
@@ -127,10 +126,10 @@ function compress(du: number): number {
   return du / (1 + Math.abs(du) / COMPRESSION)
 }
 
-/** Base mark radius per role (px at unit 1). */
-const RADIUS = { micro: 1.8, medium: 3.3, major: 4.9, endpoint: 3.6, space: 3.3 } as const
-/** Room kept around the present node on the trajectory. */
-const CURRENT_CLEARANCE = 12
+/** Radius of each role's form (px at unit 1). */
+const RADIUS = { micro: 5, medium: 9, major: 12.5, endpoint: 8, space: 8 } as const
+/** The present's form is the largest in the field. */
+export const CURRENT_RADIUS = 20
 
 /** Micro-points per block at full concentration. */
 const MAX_POINTS = 7
@@ -257,7 +256,7 @@ function arrange(model: DayFieldModel, k: number, unit: number) {
   const raw = nodes.map((n) => k * compress(n.u - nowU))
   const sig = [...raw]
   const c = nodes.indexOf(model.current)
-  const room = (n: FieldNode) => (n === model.current ? CURRENT_CLEARANCE : radiusOf(n)) * unit
+  const room = (n: FieldNode) => (n === model.current ? CURRENT_RADIUS * 0.75 : radiusOf(n) * 0.62) * unit
   const gap = (a: FieldNode, b: FieldNode) => room(a) + room(b) + 9 * unit
   for (let i = c + 1; i < nodes.length; i++) sig[i] = Math.max(sig[i], sig[i - 1] + gap(nodes[i - 1], nodes[i]))
   for (let i = c - 1; i >= 0; i--) sig[i] = Math.min(sig[i], sig[i + 1] - gap(nodes[i], nodes[i + 1]))
@@ -302,6 +301,14 @@ function fitScale(model: DayFieldModel, frame: Frame, curve: Curve): number {
 
 function sideOf(u: number, nowU: number): Exclude<TemporalSide, 'current'> {
   return u < nowU ? 'past' : 'future'
+}
+
+function samplesBetween(curve: Curve, a: number, b: number, every: number): Pt[] {
+  const n = Math.max(1, Math.round(Math.abs(b - a) / every))
+  return Array.from({ length: n }, (_, i) => {
+    const p = curve.at(a + ((b - a) * (i + 0.5)) / n)
+    return { x: p.x, y: p.y }
+  })
 }
 
 function pathBetween(curve: Curve, a: number, b: number): string {
@@ -427,9 +434,12 @@ export function layoutDayField(model: DayFieldModel, width: number, height: numb
   const k = fitScale(model, frame, curve)
   const { sig, at } = arrange(model, k, unit)
 
-  // Nodes.
+  // Nodes. Off the exact line by a few pixels, alternating sides: a field, not a timeline.
   const nodes: PlacedNode[] = model.nodes.map((node, i) => {
-    const p = curve.at(sig[i])
+    const on = curve.at(sig[i])
+    const n = normal(on.angle)
+    const lift = node === model.current ? 0 : (i % 2 ? 1 : -1) * (3 + (hash(node.id) % 100) / 100 * (node.role === 'major' ? 5 : 9)) * unit
+    const p = { x: on.x + n.x * lift, y: on.y + n.y * lift }
     const depth = getTemporalDepth(node, model.now)
     return {
       node,
@@ -437,11 +447,16 @@ export function layoutDayField(model: DayFieldModel, width: number, height: numb
       y: p.y,
       sigma: sig[i],
       depth,
-      r: radiusOf(node) * unit,
+      r: (node === model.current ? CURRENT_RADIUS : radiusOf(node)) * unit,
       pull: node === model.current ? { x: 0, y: 0 } : pullToward(p, anchor, depth.minutes),
+      hit: 0,
     }
   })
   const current = nodes.find((n) => n.node === model.current)!
+  for (const n of nodes) {
+    const nearest = Math.min(...nodes.filter((m) => m !== n).map((m) => Math.hypot(m.x - n.x, m.y - n.y)))
+    n.hit = Math.min(Math.max(nearest / 2, n === current ? 22 : 12), n === current ? 30 : 24)
+  }
 
   // Fragments: only where there is activity. Spaces keep the trajectory open,
   // and each fragment parts around its own mark instead of crossing it.
@@ -452,7 +467,7 @@ export function layoutDayField(model: DayFieldModel, width: number, height: numb
     const a = at(node.uStart)
     const b = at(node.uEnd)
     const isCurrent = node === model.current
-    const clear = (isCurrent ? CURRENT_CLEARANCE - 1 : radiusOf(node) + 2.5) * unit
+    const clear = (isCurrent ? CURRENT_RADIUS + 3 : radiusOf(node) * 0.95 + 2.5) * unit
     const base = {
       f: isCurrent ? 0 : p.depth.f,
       major: node.role === 'major',
@@ -460,10 +475,10 @@ export function layoutDayField(model: DayFieldModel, width: number, height: numb
     }
     const before = p.sigma - clear
     const after = p.sigma + clear
-    if (before - a > 3)
-      fragments.push({ ...base, id: `${node.id}-a`, d: pathBetween(curve, a, before), side: isCurrent || node.temporal === 'past' ? 'past' : 'future' })
-    if (b - after > 3)
-      fragments.push({ ...base, id: `${node.id}-b`, d: pathBetween(curve, after, b), side: isCurrent || node.temporal === 'future' ? 'future' : 'past' })
+    const piece = (id: string, from: number, to: number, side: Fragment['side']) =>
+      fragments.push({ ...base, id, side, d: pathBetween(curve, from, to), samples: samplesBetween(curve, from, to, 11 * unit) })
+    if (before - a > 3) piece(`${node.id}-a`, a, before, isCurrent || node.temporal === 'past' ? 'past' : 'future')
+    if (b - after > 3) piece(`${node.id}-b`, after, b, isCurrent || node.temporal === 'future' ? 'future' : 'past')
   }
 
   // Micro-points: density follows the concentration a block asks for.
@@ -490,7 +505,6 @@ export function layoutDayField(model: DayFieldModel, width: number, height: numb
         side: node.temporal,
         f: p.depth.f,
         pull: node === model.current ? { x: 0, y: 0 } : pullToward(pt, anchor, p.depth.minutes),
-        fate: 'fade',
       })
     }
   }
@@ -530,41 +544,12 @@ export function layoutDayField(model: DayFieldModel, width: number, height: numb
         side,
         f: Math.min(1, Math.max(0, minutesAway) / 300),
         pull: pullToward(pt, anchor, Math.max(0, minutesAway)),
-        fate: 'fade',
       })
     }
   }
 
-  // Collapse roles: the nearest points become the AHORA module, the next ones
-  // are absorbed by the present, the rest dissolve where they are.
   const scale = frame.portrait ? MODULE_SCALE.portrait : MODULE_SCALE.landscape
   const pitch = 6 * scale
-  const byDistance = [...points].sort(
-    (p, q) => Math.hypot(p.x - anchor.x, p.y - anchor.y) - Math.hypot(q.x - anchor.x, q.y - anchor.y),
-  )
-  const survivors = byDistance.slice(0, 8)
-  const cells = [0, 1, 2]
-    .flatMap((row) => [0, 1, 2].map((col) => ({ row, col })))
-    .filter(({ row, col }) => row !== 1 || col !== 1)
-    .map(({ row, col }) => {
-      const corner = row !== 1 && col !== 1
-      return {
-        x: anchor.x + (col - 1) * pitch,
-        y: anchor.y + (row - 1) * pitch,
-        r: (corner ? 1 : 1.25) * scale,
-        o: corner ? 0.35 : 0.6,
-      }
-    })
-  const angleFrom = (p: Pt) => Math.atan2(p.y - anchor.y, p.x - anchor.x)
-  const orderedCells = [...cells].sort((a, b) => angleFrom(a) - angleFrom(b))
-  ;[...survivors]
-    .sort((a, b) => angleFrom(a) - angleFrom(b))
-    .forEach((p, i) => {
-      p.fate = 'module'
-      p.cell = orderedCells[i]
-    })
-  const rest = byDistance.slice(8)
-  rest.slice(0, Math.round(rest.length * 0.28)).forEach((p) => (p.fate = 'absorb'))
 
   // Labels. Obstacles: marks and the drawn trajectory.
   const obstacles: Obstacle[] = [
@@ -587,7 +572,7 @@ export function layoutDayField(model: DayFieldModel, width: number, height: numb
     width: Math.max(Math.min(nameWidth, nameMax), labelWidth('AHORA', 10), 76),
     height: 10 + 9 + nameLines * 17 + 7 + 13,
   }
-  const currentSpot: LabelSpot = placeLabel(current, 20 * unit, currentSize, frame, obstacles, taken)
+  const currentSpot: LabelSpot = placeLabel(current, (CURRENT_RADIUS + 12) * unit, currentSize, frame, obstacles, taken)
   taken.push(currentSpot.box)
 
   const onScreen = (n: FieldNode) => {
@@ -601,7 +586,7 @@ export function layoutDayField(model: DayFieldModel, width: number, height: numb
     const node = nodes.find((q) => q.node === n)!
     const { clash, ...spot } = placeLabel(
       node,
-      node.r + 9 * unit,
+      node.r * (node.depth.side === 'past' ? 1 - 0.38 * node.depth.f : 1) + 6 * unit,
       { width: Math.min(labelWidth(n.name, 10), nameMax), height: 11 },
       frame,
       obstacles,

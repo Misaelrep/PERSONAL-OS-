@@ -216,14 +216,15 @@ describe('Day Field — layout', () => {
     expect(Math.hypot(far.pull.x, far.pull.y)).toBe(0)
   })
 
-  it('the collapse keeps a few survivors for the AHORA module and absorbs part of the rest', () => {
-    const l = layoutDayField(field('10:14'), ...MOBILE)
-    const module = l.points.filter((p) => p.fate === 'module')
-    const absorbed = l.points.filter((p) => p.fate === 'absorb').length / (l.points.length - module.length)
-    expect(module).toHaveLength(8)
-    expect(new Set(module.map((p) => `${p.cell!.x},${p.cell!.y}`)).size).toBe(8)
-    expect(absorbed).toBeGreaterThanOrEqual(0.2)
-    expect(absorbed).toBeLessThanOrEqual(0.3)
+  it('every node is tappable without covering a neighbour', () => {
+    for (const time of hours) {
+      const l = layoutDayField(field(time), ...MOBILE)
+      for (const n of l.nodes) {
+        expect(n.hit).toBeGreaterThanOrEqual(12)
+        for (const m of l.nodes) if (m !== n) expect(Math.hypot(m.x - n.x, m.y - n.y)).toBeGreaterThanOrEqual(Math.min(n.hit, 12))
+      }
+      expect(l.current.hit).toBeGreaterThanOrEqual(22)
+    }
   })
 
   it('never names more than three activities', () => {

@@ -1,3 +1,4 @@
+import { kindLabel } from '../../domain/labels'
 import type { DayView } from '../../domain/schedule'
 import type { EnergyState, ScheduledBlock } from '../../domain/types'
 
@@ -32,6 +33,11 @@ export interface FieldNode {
   uEnd: number
   /** Concentration the block asks for, 0–1 (drives micro-point density). */
   concentration: number
+  /** What the block is, for inspection: "Trabajo profundo", "Recuperación cognitiva"… */
+  kindLabel: string
+  objective?: string
+  /** Stored pending note of a partial block. */
+  pending?: string
 }
 
 export interface FieldSpace {
@@ -146,6 +152,9 @@ export function buildDayField(view: DayView, now: number): DayFieldModel {
       uEnd,
       u: role === 'endpoint' ? 1 : (uStart + uEnd) / 2,
       concentration: CONCENTRATION[b.kind],
+      kindLabel: kindLabel(b),
+      objective: b.objective,
+      pending: b.record.pendingNote,
     }
   }
 

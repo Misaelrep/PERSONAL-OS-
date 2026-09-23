@@ -10,6 +10,11 @@ const KIND_LABEL: Record<BlockKind, string> = {
   sleep: 'Descanso',
 }
 
+/** "Trabajo profundo", or the block's own descriptor. */
+export function kindLabel(block: Pick<ScheduledBlock, 'kind' | 'descriptor'>): string {
+  return block.descriptor ?? KIND_LABEL[block.kind]
+}
+
 /** "MVP / Testeo · Trabajo profundo" */
 export function blockDescription(block: ScheduledBlock): string {
   const parts = [block.subtitle, block.descriptor ?? KIND_LABEL[block.kind]]
